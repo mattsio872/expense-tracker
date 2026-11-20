@@ -5,6 +5,7 @@ const amountInput = document.getElementById('amount');
 const categoryInput = document.getElementById('category');
 const dateInput = document.getElementById('date');
 const noteInput = document.getElementById('note');
+const noteCount = document.getElementById('note-count');
 const submitBtn = document.getElementById('submit-btn');
 const cancelBtn = document.getElementById('cancel-btn');
 const list = document.getElementById('expense-list');
@@ -71,10 +72,40 @@ function formatPeso(amount) {
   return pesoFormatter.format(amount);
 }
 
+// Turns "2026-11-21" into "Nov 21, 2026" for display (we still SAVE the YYYY-MM-DD form).
+// We build the date from its parts because new Date("2026-11-21") is read as UTC
+// midnight, which can show the wrong day in some time zones.
+function formatDate(dateString) {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('en-PH', {
+    month: 'short', day: 'numeric', year: 'numeric',
+  });
+}
+
+// Shows "45 / 200" under the note, so the limit is never a surprise.
+// noteInput.maxLength reads the maxlength="200" from the HTML, so the number lives in one place.
+function updateNoteCount() {
+  const used = noteInput.value.length;
+  const max = noteInput.maxLength;
+  noteCount.textContent = `${used} / ${max}`;
+  // Add the "near-limit" class when 20 or fewer characters are left (CSS turns it red)
+  noteCount.classList.toggle('near-limit', max - used <= 20);
+}
+
+// Creates an element with a CSS class and text in one line.
+// It uses textContent, so user text can never become HTML.
+function makeElement(tag, className, text) {
+  const element = document.createElement(tag);
+  element.className = className;
+  element.textContent = text;
+  return element;
+}
+
 // Builds one row button. data-action says WHAT it does, data-id says WHICH expense.
 function makeRowButton(label, action, expense) {
   const button = document.createElement('button');
   button.type = 'button';
+  button.className = action === 'delete' ? 'btn btn-small btn-danger' : 'btn btn-small';
   button.textContent = label;
   button.dataset.action = action;   // becomes data-action="edit" / "delete"
   button.dataset.id = expense.id;   // becomes data-id="1795...-ab12"
@@ -94,21 +125,33 @@ function renderList() {
   );
 
   for (const expense of sorted) {
-    const item = document.createElement('li');
+    // Each row is built from small pieces with their own CSS classes:
+    //   <li class="expense">
+    //     <div class="expense-info"> amount, category badge, date, note </div>
+    //     <div class="expense-actions"> Edit, Delete </div>
+    //   </li>
+    const item = makeElement('li', 'expense', '');
 
-    // The expense text.
-    // textContent (not innerHTML) shows text exactly as typed,
-    // so a note like "<b>hi</b>" can't turn into real HTML.
-    const text = document.createElement('span');
-    text.textContent =
-      `${formatPeso(expense.amount)} · ${expense.category} · ${expense.date}` +
-      (expense.note ? ` · ${expense.note}` : '');
+    const info = makeElement('div', 'expense-info', '');
+    const top = makeElement('div', 'expense-top', '');
+    top.append(
+      makeElement('span', 'expense-amount', formatPeso(expense.amount)),
+      makeElement('span', 'badge', expense.category)
+    );
+    info.append(top, makeElement('div', 'expense-date', formatDate(expense.date)));
+    if (expense.note) {
+      // textContent (inside makeElement) shows the note exactly as typed,
+      // so a note like "<b>hi</b>" can't turn into real HTML.
+      info.append(makeElement('div', 'expense-note', expense.note));
+    }
 
-    item.append(
-      text, ' ',
-      makeRowButton('Edit', 'edit', expense), ' ',
+    const actions = makeElement('div', 'expense-actions', '');
+    actions.append(
+      makeRowButton('Edit', 'edit', expense),
       makeRowButton('Delete', 'delete', expense)
     );
+
+    item.append(info, actions);
     list.appendChild(item);
   }
 
@@ -140,7 +183,7 @@ function deleteExpense(id) {
   if (!expense) return;
 
   // confirm() shows OK / Cancel and returns true only if OK was clicked
-  const ok = confirm(`Delete ${formatPeso(expense.amount)} (${expense.category}) on ${expense.date}?`);
+  const ok = confirm(`Delete ${formatPeso(expense.amount)} (${expense.category}) on ${formatDate(expense.date)}?`);
   if (!ok) return;
 
   // If we were editing this one, leave edit mode first
@@ -162,6 +205,7 @@ function startEdit(id) {
   categoryInput.value = expense.category;
   dateInput.value = expense.date;
   noteInput.value = expense.note;
+  updateNoteCount();
 
   formTitle.textContent = 'Edit expense';
   submitBtn.textContent = 'Save changes';
@@ -176,6 +220,7 @@ function resetForm() {
   editingId = null;
   form.reset();
   dateInput.value = todayString();
+  updateNoteCount();
 
   formTitle.textContent = 'Add expense';
   submitBtn.textContent = 'Add expense';
@@ -219,6 +264,9 @@ form.addEventListener('submit', function (event) {
 });
 
 cancelBtn.addEventListener('click', resetForm);
+
+// "input" fires on every keystroke, paste, or delete in the note box
+noteInput.addEventListener('input', updateNoteCount);
 
 // ONE click listener on the whole list handles every Edit and Delete button
 // (this is called "event delegation"). It still works for rows that are

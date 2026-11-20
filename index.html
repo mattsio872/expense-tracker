@@ -5,56 +5,78 @@
   <meta charset="UTF-8">
   <!-- Makes the page fit phone screens instead of showing a zoomed-out desktop page -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Lets the browser use dark versions of form controls in dark mode -->
+  <meta name="color-scheme" content="light dark">
   <title>Expense Tracker</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
+  <header class="app-header">
     <h1>Expense Tracker</h1>
-    <!-- app.js will fill in the real total later -->
-    <p>Total spent: <strong id="total">₱0.00</strong></p>
+    <p class="total">
+      <span class="total-label">Total spent</span>
+      <strong id="total">₱0.00</strong>
+    </p>
   </header>
 
-  <main>
-    <!-- 1. The form for adding (and later editing) an expense -->
-    <section aria-labelledby="form-title">
+  <!-- "layout" stacks on phones, and becomes two columns on wide screens -->
+  <main class="layout">
+    <!-- 1. The form for adding (and editing) an expense -->
+    <section class="card" aria-labelledby="form-title">
       <h2 id="form-title">Add expense</h2>
 
       <form id="expense-form">
-        <label for="amount">Amount (₱)</label>
-        <input id="amount" name="amount" type="number" inputmode="decimal"
-               min="0.01" step="0.01" placeholder="0.00" required>
+        <!-- Each label + input pair is wrapped in a "field" so they stay together -->
+        <div class="field">
+          <label for="amount">Amount</label>
+          <div class="amount-input">
+            <span class="currency" aria-hidden="true">₱</span>
+            <input id="amount" name="amount" type="number" inputmode="decimal"
+                   min="0.01" step="0.01" placeholder="0.00" required>
+          </div>
+        </div>
 
-        <label for="category">Category</label>
-        <select id="category" name="category" required>
-          <option value="Food">Food</option>
-          <option value="Transport">Transport</option>
-          <option value="Bills">Bills</option>
-          <option value="Shopping">Shopping</option>
-          <option value="Health">Health</option>
-          <option value="Entertainment">Entertainment</option>
-          <option value="School">School</option>
-          <option value="Other">Other</option>
-        </select>
+        <div class="field">
+          <label for="category">Category</label>
+          <select id="category" name="category" required>
+            <option value="Food">Food</option>
+            <option value="Transport">Transport</option>
+            <option value="Bills">Bills</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Health">Health</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="School">School</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
 
-        <label for="date">Date</label>
-        <input id="date" name="date" type="date" required>
+        <div class="field">
+          <label for="date">Date</label>
+          <input id="date" name="date" type="date" required>
+        </div>
 
-        <label for="note">Note</label>
-        <input id="note" name="note" type="text" maxlength="80"
-               placeholder="e.g. Lunch with classmates">
+        <div class="field">
+          <label for="note">Note <span class="optional">(optional)</span></label>
+          <!-- maxlength stops typing at 200 characters; the counter below shows how many are left.
+               aria-describedby makes screen readers read the counter along with the field. -->
+          <input id="note" name="note" type="text" maxlength="200"
+                 placeholder="e.g. Lunch with classmates" aria-describedby="note-count">
+          <small id="note-count" class="hint">0 / 200</small>
+        </div>
 
-        <button type="submit" id="submit-btn">Add expense</button>
-        <!-- Only shown while editing. type="button" so it doesn't submit the form -->
-        <button type="button" id="cancel-btn" hidden>Cancel</button>
+        <div class="form-actions">
+          <button type="submit" id="submit-btn" class="btn btn-primary">Add expense</button>
+          <!-- Only shown while editing. type="button" so it doesn't submit the form -->
+          <button type="button" id="cancel-btn" class="btn" hidden>Cancel</button>
+        </div>
       </form>
     </section>
 
     <!-- 2. The list of saved expenses -->
-    <section aria-labelledby="list-title">
+    <section class="card" aria-labelledby="list-title">
       <h2 id="list-title">Expenses</h2>
-      <p id="empty-message">No expenses yet. Add your first one above.</p>
-      <ul id="expense-list"></ul>
+      <p id="empty-message" class="empty">No expenses yet. Add your first one using the form.</p>
+      <ul id="expense-list" class="expense-list"></ul>
     </section>
   </main>
 

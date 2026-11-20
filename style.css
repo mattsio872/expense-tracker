@@ -1,1 +1,326 @@
-/* Styles come in Step 7. This file exists now so index.html can link to it without an error. */
+/* =========================================================
+   1. Design tokens: all colors and sizes in one place.
+   "--name" is a CSS variable. We use it later with var(--name).
+   Changing a color here changes it everywhere.
+   ========================================================= */
+:root {
+  --bg: #f4f5f7;          /* page background */
+  --surface: #ffffff;     /* cards */
+  --text: #1c1e21;        /* main text */
+  --muted: #5f6670;       /* secondary text (dates, labels) */
+  --border: #d9dce1;
+  --primary: #1f6f5c;     /* main button, focus ring */
+  --primary-text: #ffffff;
+  --danger: #b42318;      /* delete */
+  --badge-bg: #e3f1ec;
+  --badge-text: #1f6f5c;
+
+  --radius: 12px;
+  --gap: 16px;
+  --tap: 44px;            /* minimum height for anything you tap (finger-sized) */
+}
+
+/* Dark mode: when the phone/computer is set to dark, swap the colors.
+   Everything else stays the same because it all uses the variables above. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121416;
+    --surface: #1d2023;
+    --text: #e8eaed;
+    --muted: #a0a7b0;
+    --border: #353a40;
+    --primary: #4fb79c;
+    --primary-text: #0b1f1a;
+    --danger: #f2877d;
+    --badge-bg: #1f3a33;
+    --badge-text: #8fd6c2;
+  }
+}
+
+/* =========================================================
+   2. Base: sensible defaults for the whole page
+   ========================================================= */
+
+/* Make width/height include padding and border (much easier to reason about) */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* The "hidden" attribute must always win, even over our button styles below */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  /* "system-ui" uses the phone's/computer's own font: fast and familiar */
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;   /* 16px+ stops iPhones from zooming in when you tap an input */
+  line-height: 1.5;
+}
+
+h1,
+h2 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 1.125rem;
+  margin-bottom: var(--gap);
+}
+
+/* =========================================================
+   3. Header with the total
+   ========================================================= */
+.app-header {
+  display: flex;
+  flex-wrap: wrap;               /* lets the total drop below the title on narrow phones */
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px var(--gap);
+  padding: var(--gap);
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.app-header h1 {
+  font-size: 1.375rem;
+}
+
+.total {
+  margin: 0;
+  text-align: right;
+}
+
+.total-label {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+#total {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums; /* digits all the same width, so numbers line up */
+}
+
+/* =========================================================
+   4. Layout: ONE column on phones (mobile-first)...
+   ========================================================= */
+.layout {
+  display: grid;
+  gap: var(--gap);
+  padding: 0 var(--gap) var(--gap);
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ...and TWO columns once the screen is at least 768px wide (tablets, laptops) */
+@media (min-width: 768px) {
+  .layout {
+    grid-template-columns: 320px 1fr; /* form: fixed width, list: the rest */
+    align-items: start;
+  }
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--gap);
+  min-width: 0; /* lets long notes wrap instead of stretching the card */
+}
+
+/* =========================================================
+   5. Form
+   ========================================================= */
+#expense-form {
+  display: grid;
+  gap: 14px;
+}
+
+.field label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  margin-bottom: 4px;
+}
+
+/* The "45 / 200" character counter under the note */
+.hint {
+  display: block;
+  margin-top: 4px;
+  text-align: right;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hint.near-limit {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.optional {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+input,
+select {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 8px 12px;
+  font: inherit;               /* inputs don't inherit the page font by default */
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* The ₱ sign sitting inside the amount box */
+.amount-input {
+  position: relative;
+}
+
+.currency {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none; /* clicks go through to the input */
+}
+
+.amount-input input {
+  padding-left: 30px; /* make room for the ₱ */
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.form-actions .btn {
+  flex: 1; /* buttons share the row equally */
+}
+
+/* =========================================================
+   6. Buttons
+   ========================================================= */
+.btn {
+  min-height: var(--tap);
+  padding: 8px 16px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: var(--muted);
+}
+
+.btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+  border-color: var(--primary);
+}
+
+.btn-danger {
+  color: var(--danger);
+}
+
+.btn-small {
+  font-size: 0.875rem;
+  padding: 6px 12px;
+}
+
+/* Keyboard users see a clear ring on whatever is focused */
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   7. Expense list
+   ========================================================= */
+.empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.expense-list {
+  list-style: none; /* remove the bullet points */
+  margin: 0;
+  padding: 0;
+}
+
+.expense {
+  display: flex;
+  flex-wrap: wrap;            /* on very narrow screens the buttons move under the text */
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.expense:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.expense-info {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.expense-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.expense-amount {
+  font-weight: 700;
+  font-size: 1.0625rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px; /* fully rounded "pill" */
+  background: var(--badge-bg);
+  color: var(--badge-text);
+}
+
+.expense-date {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.expense-note {
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere; /* a very long word can't push the layout sideways */
+}
+
+.expense-actions {
+  display: flex;
+  gap: 8px;
+}
