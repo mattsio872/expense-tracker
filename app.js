@@ -84,6 +84,11 @@ let expenses = loadExpenses();
 // Which expense is being edited right now. null = we're adding a new one.
 let editingId = null;
 
+// Which expense is showing "Delete this? [Yes, delete] [Cancel]" right now. null = none.
+// We ask inside the row instead of using confirm(), because some browsers (in-app browsers,
+// or after "prevent this page from creating dialogs") block confirm() and it silently answers "Cancel".
+let confirmingDeleteId = null;
+
 // What the list is filtered by. "all" means no filter.
 // month looks like "2026-11" (the first 7 characters of a date), category like "Food".
 let filters = loadFilters();
@@ -198,14 +203,15 @@ function makeElement(tag, className, text) {
 }
 
 // Builds one row button. data-action says WHAT it does, data-id says WHICH expense.
-function makeRowButton(label, action, expense) {
+// extraClass is optional: e.g. 'btn-danger' makes the button red.
+function makeRowButton(label, action, expense, extraClass = '') {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = action === 'delete' ? 'btn btn-small btn-danger' : 'btn btn-small';
+  button.className = `btn btn-small ${extraClass}`;
   button.textContent = label;
-  button.dataset.action = action;   // becomes data-action="edit" / "delete"
+  button.dataset.action = action;   // becomes data-action="edit" / "delete" / ...
   button.dataset.id = expense.id;   // becomes data-id="1795...-ab12"
-  button.setAttribute('aria-label', `${label} ${expense.category} expense of ${formatPeso(expense.amount)}`);
+  button.setAttribute('aria-label', `${label}: ${expense.category} expense of ${formatPeso(expense.amount)}`);
   return button;
 }
 
@@ -246,10 +252,19 @@ function renderList() {
     }
 
     const actions = makeElement('div', 'expense-actions', '');
-    actions.append(
-      makeRowButton('Edit', 'edit', expense),
-      makeRowButton('Delete', 'delete', expense)
-    );
+    if (expense.id === confirmingDeleteId) {
+      // This row is asking "are you sure?"
+      actions.append(
+        makeElement('span', 'confirm-text', 'Delete this?'),
+        makeRowButton('Yes, delete', 'confirm-delete', expense, 'btn-danger-solid'),
+        makeRowButton('Cancel', 'cancel-delete', expense)
+      );
+    } else {
+      actions.append(
+        makeRowButton('Edit', 'edit', expense),
+        makeRowButton('Delete', 'delete', expense, 'btn-danger')
+      );
+    }
 
     item.append(info, actions);
     list.appendChild(item);
@@ -421,13 +436,22 @@ function updateExpense(id, changes) {
   renderList();
 }
 
-function deleteExpense(id) {
-  const expense = expenses.find((e) => e.id === id);
-  if (!expense) return;
+// Step 1 of deleting: switch that row to "Delete this? [Yes, delete] [Cancel]"
+function askToDelete(id) {
+  confirmingDeleteId = id;
+  renderList();
+  // Put keyboard focus on Cancel (the safe choice), so pressing Enter by accident deletes nothing
+  list.querySelector(`button[data-action="cancel-delete"][data-id="${id}"]`)?.focus();
+}
 
-  // confirm() shows OK / Cancel and returns true only if OK was clicked
-  const ok = confirm(`Delete ${formatPeso(expense.amount)} (${expense.category}) on ${formatDate(expense.date)}?`);
-  if (!ok) return;
+function cancelDelete() {
+  confirmingDeleteId = null;
+  renderList();
+}
+
+// Step 2: really delete (only reached from the "Yes, delete" button)
+function deleteExpense(id) {
+  confirmingDeleteId = null;
 
   // If we were editing this one, leave edit mode first
   if (editingId === id) resetForm();
@@ -519,10 +543,18 @@ list.addEventListener('click', function (event) {
   const button = event.target.closest('button[data-action]');
   if (!button) return;
 
-  if (button.dataset.action === 'edit') {
-    startEdit(button.dataset.id);
-  } else if (button.dataset.action === 'delete') {
-    deleteExpense(button.dataset.id);
+  const id = button.dataset.id;
+  const action = button.dataset.action;
+
+  if (action === 'edit') {
+    if (confirmingDeleteId) cancelDelete(); // starting an edit closes any open "Delete this?"
+    startEdit(id);
+  } else if (action === 'delete') {
+    askToDelete(id);          // first click: ask
+  } else if (action === 'confirm-delete') {
+    deleteExpense(id);        // "Yes, delete": really delete
+  } else if (action === 'cancel-delete') {
+    cancelDelete();           // "Cancel": back to normal
   }
 });
 
