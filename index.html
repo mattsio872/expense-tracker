@@ -8,7 +8,10 @@
   <!-- Lets the browser use dark versions of form controls in dark mode -->
   <meta name="color-scheme" content="light dark">
   <title>Matt's Expense Tracker</title>
-  <link rel="stylesheet" href="style.css">
+  <!-- "?v=2" is a version number. Browsers keep a saved copy of style.css and app.js for a while,
+       so after changing either file, add 1 here AND on the app.js link below. The new number makes
+       the browser treat it as a new file and download it, instead of mixing new HTML with old CSS/JS. -->
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
   <header class="app-header">
@@ -164,6 +167,6 @@
   </main>
 
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js" defer></script>
+  <script src="app.js?v=2" defer></script>
 </body>
 </html>

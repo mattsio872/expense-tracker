@@ -30,6 +30,8 @@ That's it. If you change the code, refresh the page (**Ctrl + F5** forces the br
 
 The live version at **https://mattsio872.github.io/expense-tracker/** is served by GitHub Pages straight from the `main` branch. Every `git push` to `main` updates the live site automatically, usually within 1–2 minutes.
 
+> **When you change `style.css` or `app.js`:** raise the `?v=` number on both links in `index.html` (e.g. `?v=2` → `?v=3`). Browsers keep saved copies of those files for about 10 minutes, and without a new number a phone can end up mixing the new page with the old CSS or JavaScript.
+
 ## Files
 
 | File | What it's for |
