@@ -92,9 +92,31 @@ h2 {
   font-size: 1.375rem;
 }
 
+/* Icon + title side by side, centered vertically */
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The image file is 160×160, shown at 40×40, so it stays sharp on high-resolution phone screens */
+.app-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0; /* never squash the icon if the title gets tight */
+}
+
+/* On phones the longer title pushes the total onto its own line, so line it up on the left.
+   On wide screens (see the media query below) it sits on the right, next to the title. */
 .total {
   margin: 0;
-  text-align: right;
+  text-align: left;
+}
+
+@media (min-width: 768px) {
+  .total {
+    text-align: right;
+  }
 }
 
 .total-label {

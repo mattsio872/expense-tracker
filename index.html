@@ -7,12 +7,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Lets the browser use dark versions of form controls in dark mode -->
   <meta name="color-scheme" content="light dark">
-  <title>Expense Tracker</title>
+  <title>Matt's Expense Tracker</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="app-header">
-    <h1>Expense Tracker</h1>
+    <!-- alt="" marks the icon as decoration, so screen readers just read the title text.
+         width/height reserve the space before the image loads, so the page doesn't jump. -->
+    <h1 class="app-title">
+      <img class="app-icon" src="images/monkey-icon.png" alt="" width="40" height="40">
+      Matt's Expense Tracker
+    </h1>
     <p class="total">
       <span class="total-label">Total spent</span>
       <strong id="total">₱0.00</strong>
