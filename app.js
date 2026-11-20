@@ -7,12 +7,40 @@ const noteInput = document.getElementById('note');
 const list = document.getElementById('expense-list');
 const emptyMessage = document.getElementById('empty-message');
 
-// ===== 2. State: the app's data, kept in memory =====
-// Every expense looks like: { id, amount, category, date, note }
-// (Step 3 will save this to localStorage so it survives a refresh.)
-let expenses = [];
+// ===== 2. Storage: save and load with localStorage =====
+// localStorage is a small storage area in the browser. It only stores TEXT,
+// so we turn our array into JSON text to save it, and back into an array to load it.
+const STORAGE_KEY = 'expenses';
 
-// ===== 3. Helpers =====
+function loadExpenses() {
+  try {
+    const text = localStorage.getItem(STORAGE_KEY); // null if nothing saved yet
+    const data = JSON.parse(text);
+    // Only trust it if it really is an array. Otherwise start fresh.
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    // Broken JSON, or storage blocked (e.g. some private windows):
+    // don't crash, just start with an empty list.
+    console.warn('Could not load saved expenses:', error);
+    return [];
+  }
+}
+
+function saveExpenses(list) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  } catch (error) {
+    alert('Could not save your expenses in this browser.');
+    console.warn('Could not save expenses:', error);
+  }
+}
+
+// ===== 3. State: the app's data =====
+// Every expense looks like: { id, amount, category, date, note }
+// We start with whatever was saved last time.
+let expenses = loadExpenses();
+
+// ===== 4. Helpers =====
 
 // Today's date as "YYYY-MM-DD" in YOUR time zone.
 // (toISOString() uses UTC time, which could give yesterday's date in the Philippines before 8 AM.)
@@ -29,7 +57,7 @@ function makeId() {
   return Date.now() + '-' + Math.random().toString(36).slice(2, 6);
 }
 
-// ===== 4. Render: draw the expenses array onto the page =====
+// ===== 5. Render: draw the expenses array onto the page =====
 function renderList() {
   list.innerHTML = ''; // clear the old list, then rebuild it from the array
 
@@ -47,13 +75,14 @@ function renderList() {
   emptyMessage.hidden = expenses.length > 0;
 }
 
-// ===== 5. Actions =====
+// ===== 6. Actions =====
 function addExpense(expense) {
   expenses.push(expense);
+  saveExpenses(expenses); // save every time the data changes
   renderList();
 }
 
-// ===== 6. Events: react to what the user does =====
+// ===== 7. Events: react to what the user does =====
 form.addEventListener('submit', function (event) {
   // By default a form reloads the page when submitted. We stop that.
   event.preventDefault();
@@ -84,6 +113,6 @@ form.addEventListener('submit', function (event) {
   amountInput.focus();
 });
 
-// ===== 7. Start-up =====
+// ===== 8. Start-up =====
 dateInput.value = todayString(); // pre-fill today's date
 renderList();
