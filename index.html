@@ -79,7 +79,36 @@
 
     <!-- 2. The list of saved expenses -->
     <section class="card" aria-labelledby="list-title">
-      <h2 id="list-title">Expenses</h2>
+      <!-- Heading on the left, total of the expenses currently shown on the right -->
+      <div class="list-header">
+        <h2 id="list-title">Expenses</h2>
+        <p class="list-total" id="list-total-box">
+          <!-- "visually-hidden" text is read by screen readers but not shown on screen -->
+          <span class="visually-hidden">Total of expenses shown: </span>
+          <strong id="list-total">₱0.00</strong>
+        </p>
+      </div>
+
+      <!-- Filters: app.js fills in the months (from your expenses) and the categories (copied from the form) -->
+      <div class="filters" id="filters">
+        <div class="field">
+          <label for="filter-month">Month</label>
+          <select id="filter-month">
+            <option value="all">All months</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="filter-category">Category</label>
+          <select id="filter-category">
+            <option value="all">All categories</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- e.g. "Showing 2 of 3 expenses".
+           aria-live="polite" makes screen readers announce it when the filters change. -->
+      <p id="filter-summary" class="summary" aria-live="polite"></p>
+
       <p id="empty-message" class="empty">No expenses yet. Add your first one using the form.</p>
       <ul id="expense-list" class="expense-list"></ul>
     </section>

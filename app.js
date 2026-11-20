@@ -11,6 +11,12 @@ const cancelBtn = document.getElementById('cancel-btn');
 const list = document.getElementById('expense-list');
 const totalEl = document.getElementById('total');
 const emptyMessage = document.getElementById('empty-message');
+const filtersBox = document.getElementById('filters');
+const filterMonth = document.getElementById('filter-month');
+const filterCategory = document.getElementById('filter-category');
+const filterSummary = document.getElementById('filter-summary');
+const listTotalBox = document.getElementById('list-total-box');
+const listTotal = document.getElementById('list-total');
 
 // ===== 2. Storage: save and load with localStorage =====
 // localStorage is a small storage area in the browser. It only stores TEXT,
@@ -40,6 +46,31 @@ function saveExpenses(list) {
   }
 }
 
+// The filter choice is saved too, so the app opens the way you left it.
+// It's only a convenience, so if anything goes wrong we quietly fall back to "show everything".
+const FILTERS_KEY = 'filters';
+const NO_FILTERS = { month: 'all', category: 'all' };
+
+function loadFilters() {
+  try {
+    const data = JSON.parse(localStorage.getItem(FILTERS_KEY));
+    if (data && typeof data.month === 'string' && typeof data.category === 'string') {
+      return data;
+    }
+  } catch (error) {
+    // ignore: we'll just show everything
+  }
+  return { ...NO_FILTERS };
+}
+
+function saveFilters(value) {
+  try {
+    localStorage.setItem(FILTERS_KEY, JSON.stringify(value));
+  } catch (error) {
+    // ignore: not being able to remember a filter isn't worth an alert
+  }
+}
+
 // ===== 3. State: the app's data =====
 // Every expense looks like: { id, amount, category, date, note }
 // We start with whatever was saved last time.
@@ -47,6 +78,10 @@ let expenses = loadExpenses();
 
 // Which expense is being edited right now. null = we're adding a new one.
 let editingId = null;
+
+// What the list is filtered by. "all" means no filter.
+// month looks like "2026-11" (the first 7 characters of a date), category like "Food".
+let filters = loadFilters();
 
 // ===== 4. Helpers =====
 
@@ -80,6 +115,62 @@ function formatDate(dateString) {
   return new Date(year, month - 1, day).toLocaleDateString('en-PH', {
     month: 'short', day: 'numeric', year: 'numeric',
   });
+}
+
+// "2026-11-21" -> "2026-11". Because dates are YYYY-MM-DD, the month is just the first 7 characters.
+function monthOf(expense) {
+  return expense.date.slice(0, 7);
+}
+
+// "2026-11" -> "Nov 2026" (short names, so they fit in the dropdown on a phone)
+function formatMonth(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' });
+}
+
+// "1 expense" / "3 expenses"
+function countLabel(n) {
+  return n === 1 ? '1 expense' : `${n} expenses`;
+}
+
+// Does this expense pass BOTH filters? ("all" lets everything through)
+function matchesFilters(expense) {
+  const monthOk = filters.month === 'all' || monthOf(expense) === filters.month;
+  const categoryOk = filters.category === 'all' || expense.category === filters.category;
+  return monthOk && categoryOk;
+}
+
+// Fill the category filter by COPYING the options from the form's category dropdown,
+// so the list of categories lives in one place (index.html). Runs once at start-up.
+function fillCategoryFilter() {
+  for (const option of categoryInput.options) {
+    filterCategory.add(new Option(option.text, option.value));
+  }
+  // A saved category that no longer exists? Fall back to "all".
+  if (![...filterCategory.options].some((o) => o.value === filters.category)) {
+    filters.category = 'all';
+  }
+  filterCategory.value = filters.category;
+}
+
+// Rebuild the month filter from the months that actually have expenses (newest first).
+// Runs on every render, because adding/editing/deleting can create or remove a month.
+function updateMonthOptions() {
+  // A Set keeps only unique values: ["2026-11", "2026-11", "2026-10"] -> {"2026-11", "2026-10"}
+  const months = [...new Set(expenses.map(monthOf))].sort().reverse();
+
+  // If the chosen month has no expenses any more (e.g. you deleted the last one), show all months
+  if (filters.month !== 'all' && !months.includes(filters.month)) {
+    filters.month = 'all';
+    saveFilters(filters);
+  }
+
+  filterMonth.innerHTML = '';
+  filterMonth.add(new Option('All months', 'all'));
+  for (const month of months) {
+    filterMonth.add(new Option(formatMonth(month), month));
+  }
+  filterMonth.value = filters.month;
 }
 
 // Shows "45 / 200" under the note, so the limit is never a surprise.
@@ -116,6 +207,7 @@ function makeRowButton(label, action, expense) {
 // ===== 5. Render: draw the expenses array onto the page =====
 function renderList() {
   list.innerHTML = ''; // clear the old list, then rebuild it from the array
+  updateMonthOptions();
 
   // Newest first. We sort a COPY ([...expenses]) so the saved data isn't reordered.
   // Dates are "YYYY-MM-DD" text, which sorts correctly as plain text.
@@ -124,7 +216,10 @@ function renderList() {
     (a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
   );
 
-  for (const expense of sorted) {
+  // Keep only the expenses that pass the filters. The saved data is untouched.
+  const visible = sorted.filter(matchesFilters);
+
+  for (const expense of visible) {
     // Each row is built from small pieces with their own CSS classes:
     //   <li class="expense">
     //     <div class="expense-info"> amount, category badge, date, note </div>
@@ -155,12 +250,32 @@ function renderList() {
     list.appendChild(item);
   }
 
-  // Show "No expenses yet" only when the list is empty
-  emptyMessage.hidden = expenses.length > 0;
-
   // Total: reduce() walks the array and adds each amount to a running sum (starting at 0)
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
-  totalEl.textContent = formatPeso(total);
+  totalEl.textContent = formatPeso(total); // the header always shows the ALL-TIME total
+
+  // No expenses at all: hide the filters, they'd have nothing to filter
+  filtersBox.hidden = expenses.length === 0;
+
+  // The empty message has two versions: nothing saved yet, or nothing matches the filters
+  if (expenses.length === 0) {
+    emptyMessage.textContent = 'No expenses yet. Add your first one using the form.';
+  } else {
+    emptyMessage.textContent = 'No expenses match these filters.';
+  }
+  emptyMessage.hidden = visible.length > 0;
+
+  // Total of what's SHOWN (after filtering), beside the "Expenses" heading
+  const visibleTotal = visible.reduce((sum, e) => sum + e.amount, 0);
+  listTotal.textContent = formatPeso(visibleTotal);
+  listTotalBox.hidden = expenses.length === 0;
+
+  // Summary line under the filters: just the count (the money is in the heading now)
+  const filtered = filters.month !== 'all' || filters.category !== 'all';
+  filterSummary.textContent = filtered
+    ? `Showing ${visible.length} of ${countLabel(expenses.length)}`
+    : countLabel(expenses.length);
+  filterSummary.hidden = expenses.length === 0;
 }
 
 // ===== 6. Actions =====
@@ -283,6 +398,21 @@ list.addEventListener('click', function (event) {
   }
 });
 
+// Changing either filter: remember the choice, save it, redraw.
+// "change" fires when you pick a different option in a dropdown.
+filterMonth.addEventListener('change', function () {
+  filters.month = filterMonth.value;
+  saveFilters(filters);
+  renderList();
+});
+
+filterCategory.addEventListener('change', function () {
+  filters.category = filterCategory.value;
+  saveFilters(filters);
+  renderList();
+});
+
 // ===== 8. Start-up =====
+fillCategoryFilter();
 resetForm(); // start in "add mode" with today's date
 renderList();
