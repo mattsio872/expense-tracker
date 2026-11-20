@@ -4,6 +4,8 @@ A small expense tracker that runs entirely in your browser. You can add, edit an
 
 Built step by step as a learning project for working with AI coding agents.
 
+**▶ Try it live: https://mattsio872.github.io/expense-tracker/**. It works on phones too. Use *Add to Home Screen* to open it like an app. Each device keeps its own list.
+
 ## Features
 
 - Add an expense with an **amount (₱)**, **category**, **date**, and an optional **note** (up to 200 characters, with a counter).
@@ -23,6 +25,10 @@ No installation needed.
 That's it. If you change the code, refresh the page (**Ctrl + F5** forces the browser to reload CSS and JS).
 
 > **Optional:** in VS Code, the *Live Server* extension serves the app at an address like `http://127.0.0.1:5500` and refreshes it automatically when you save a file.
+
+### Online (GitHub Pages)
+
+The live version at **https://mattsio872.github.io/expense-tracker/** is served by GitHub Pages straight from the `main` branch. Every `git push` to `main` updates the live site automatically, usually within 1–2 minutes.
 
 ## Files
 
