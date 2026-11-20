@@ -8,6 +8,7 @@ const noteInput = document.getElementById('note');
 const submitBtn = document.getElementById('submit-btn');
 const cancelBtn = document.getElementById('cancel-btn');
 const list = document.getElementById('expense-list');
+const totalEl = document.getElementById('total');
 const emptyMessage = document.getElementById('empty-message');
 
 // ===== 2. Storage: save and load with localStorage =====
@@ -63,6 +64,13 @@ function makeId() {
   return Date.now() + '-' + Math.random().toString(36).slice(2, 6);
 }
 
+// Formats a number as Philippine pesos, e.g. 10000 -> "₱10,000.00".
+// Intl.NumberFormat is built into the browser, so we don't write this by hand.
+const pesoFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
+function formatPeso(amount) {
+  return pesoFormatter.format(amount);
+}
+
 // Builds one row button. data-action says WHAT it does, data-id says WHICH expense.
 function makeRowButton(label, action, expense) {
   const button = document.createElement('button');
@@ -70,7 +78,7 @@ function makeRowButton(label, action, expense) {
   button.textContent = label;
   button.dataset.action = action;   // becomes data-action="edit" / "delete"
   button.dataset.id = expense.id;   // becomes data-id="1795...-ab12"
-  button.setAttribute('aria-label', `${label} ${expense.category} expense of ₱${expense.amount.toFixed(2)}`);
+  button.setAttribute('aria-label', `${label} ${expense.category} expense of ${formatPeso(expense.amount)}`);
   return button;
 }
 
@@ -78,7 +86,14 @@ function makeRowButton(label, action, expense) {
 function renderList() {
   list.innerHTML = ''; // clear the old list, then rebuild it from the array
 
-  for (const expense of expenses) {
+  // Newest first. We sort a COPY ([...expenses]) so the saved data isn't reordered.
+  // Dates are "YYYY-MM-DD" text, which sorts correctly as plain text.
+  // Same date? The id starts with the time it was created, so newer ids win.
+  const sorted = [...expenses].sort(
+    (a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
+  );
+
+  for (const expense of sorted) {
     const item = document.createElement('li');
 
     // The expense text.
@@ -86,7 +101,7 @@ function renderList() {
     // so a note like "<b>hi</b>" can't turn into real HTML.
     const text = document.createElement('span');
     text.textContent =
-      `₱${expense.amount.toFixed(2)} · ${expense.category} · ${expense.date}` +
+      `${formatPeso(expense.amount)} · ${expense.category} · ${expense.date}` +
       (expense.note ? ` · ${expense.note}` : '');
 
     item.append(
@@ -99,6 +114,10 @@ function renderList() {
 
   // Show "No expenses yet" only when the list is empty
   emptyMessage.hidden = expenses.length > 0;
+
+  // Total: reduce() walks the array and adds each amount to a running sum (starting at 0)
+  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  totalEl.textContent = formatPeso(total);
 }
 
 // ===== 6. Actions =====
@@ -121,7 +140,7 @@ function deleteExpense(id) {
   if (!expense) return;
 
   // confirm() shows OK / Cancel and returns true only if OK was clicked
-  const ok = confirm(`Delete ₱${expense.amount.toFixed(2)} (${expense.category}) on ${expense.date}?`);
+  const ok = confirm(`Delete ${formatPeso(expense.amount)} (${expense.category}) on ${expense.date}?`);
   if (!ok) return;
 
   // If we were editing this one, leave edit mode first
