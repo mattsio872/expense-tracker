@@ -63,11 +63,24 @@ function renderList() {
 
   for (const expense of expenses) {
     const item = document.createElement('li');
+
+    // The expense text.
     // textContent (not innerHTML) shows text exactly as typed,
     // so a note like "<b>hi</b>" can't turn into real HTML.
-    item.textContent =
+    const text = document.createElement('span');
+    text.textContent =
       `₱${expense.amount.toFixed(2)} · ${expense.category} · ${expense.date}` +
       (expense.note ? ` · ${expense.note}` : '');
+
+    // The Delete button. data-id stores WHICH expense this button belongs to.
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.dataset.action = 'delete'; // becomes data-action="delete"
+    deleteBtn.dataset.id = expense.id;   // becomes data-id="1795...-ab12"
+    deleteBtn.setAttribute('aria-label', `Delete ${expense.category} expense of ₱${expense.amount.toFixed(2)}`);
+
+    item.append(text, ' ', deleteBtn);
     list.appendChild(item);
   }
 
@@ -79,6 +92,20 @@ function renderList() {
 function addExpense(expense) {
   expenses.push(expense);
   saveExpenses(expenses); // save every time the data changes
+  renderList();
+}
+
+function deleteExpense(id) {
+  const expense = expenses.find((e) => e.id === id);
+  if (!expense) return;
+
+  // confirm() shows OK / Cancel and returns true only if OK was clicked
+  const ok = confirm(`Delete ₱${expense.amount.toFixed(2)} (${expense.category}) on ${expense.date}?`);
+  if (!ok) return;
+
+  // filter() makes a NEW array that keeps every expense EXCEPT this one
+  expenses = expenses.filter((e) => e.id !== id);
+  saveExpenses(expenses); // same pattern: change, save, redraw
   renderList();
 }
 
@@ -111,6 +138,19 @@ form.addEventListener('submit', function (event) {
   form.reset();
   dateInput.value = todayString();
   amountInput.focus();
+});
+
+// ONE click listener on the whole list handles every Delete button
+// (this is called "event delegation"). It still works for rows that are
+// added later, because the list itself never gets replaced.
+list.addEventListener('click', function (event) {
+  // closest() finds the button that was clicked (or null if you clicked text)
+  const button = event.target.closest('button[data-action]');
+  if (!button) return;
+
+  if (button.dataset.action === 'delete') {
+    deleteExpense(button.dataset.id);
+  }
 });
 
 // ===== 8. Start-up =====
