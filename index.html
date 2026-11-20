@@ -133,9 +133,23 @@
     <!-- 4. Backup: save all expenses to a CSV file (and, in the next step, load them back) -->
     <section class="card backup-card" aria-labelledby="backup-title">
       <h2 id="backup-title">Backup</h2>
-      <p class="card-note">Save all your expenses as a CSV file. It opens in Excel or Google Sheets.</p>
+      <p class="card-note">Save all your expenses as a CSV file (opens in Excel or Google Sheets), or load them back from one.</p>
       <div class="backup-actions">
         <button type="button" id="export-btn" class="btn btn-primary">Export CSV</button>
+        <button type="button" id="import-btn" class="btn">Import CSV</button>
+        <!-- The real file picker is hidden; the Import button opens it. accept= limits it to CSV files -->
+        <input type="file" id="import-file" accept=".csv,text/csv" hidden>
+      </div>
+
+      <!-- After picking a file: what was found, any problems, and what to do with it -->
+      <div id="import-preview" class="import-preview" hidden>
+        <p id="import-summary" class="import-summary"></p>
+        <ul id="import-problems" class="import-problems"></ul>
+        <div class="backup-actions">
+          <button type="button" id="import-merge" class="btn btn-primary">Add new expenses</button>
+          <button type="button" id="import-replace" class="btn btn-danger">Replace all</button>
+          <button type="button" id="import-cancel" class="btn">Cancel</button>
+        </div>
       </div>
       <!-- e.g. "Exported 4 expenses to expenses-2026-11-21.csv" -->
       <p id="backup-status" class="summary backup-status" aria-live="polite"></p>

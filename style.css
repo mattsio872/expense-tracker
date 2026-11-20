@@ -560,3 +560,30 @@ select {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* The box that appears after picking a file to import */
+.import-preview {
+  margin-top: var(--gap);
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.import-summary {
+  margin: 0 0 8px;
+  overflow-wrap: anywhere; /* long file names wrap instead of widening the page */
+}
+
+/* Rows that couldn't be imported, e.g. "Row 4: amount is missing" */
+.import-problems {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 0.875rem;
+  color: var(--danger);
+  overflow-wrap: anywhere;
+}
+
+.import-problems:empty {
+  display: none;
+}

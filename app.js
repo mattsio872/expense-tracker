@@ -24,6 +24,14 @@ const chartLegend = document.getElementById('chart-legend');
 const categoryChart = document.getElementById('category-chart');
 const exportBtn = document.getElementById('export-btn');
 const backupStatus = document.getElementById('backup-status');
+const importBtn = document.getElementById('import-btn');
+const importFile = document.getElementById('import-file');
+const importPreview = document.getElementById('import-preview');
+const importSummary = document.getElementById('import-summary');
+const importProblems = document.getElementById('import-problems');
+const importMergeBtn = document.getElementById('import-merge');
+const importReplaceBtn = document.getElementById('import-replace');
+const importCancelBtn = document.getElementById('import-cancel');
 
 // ===== 2. Storage: save and load with localStorage =====
 // localStorage is a small storage area in the browser. It only stores TEXT,
@@ -491,6 +499,221 @@ function exportCsv() {
   backupStatus.textContent = `Exported ${countLabel(expenses.length)} to ${fileName}.`;
 }
 
+// ===== 5d. Backup: import from a CSV file =====
+// The file could come from anywhere (an old backup, a sheet you edited by hand),
+// so every row is CHECKED before anything is saved. Nothing changes until you choose
+// "Add new expenses" or "Replace all" in the preview.
+
+const MAX_IMPORT_BYTES = 1_000_000; // 1 MB is many thousands of expenses; anything bigger is probably the wrong file
+
+// What was read from the chosen file, waiting for your decision. null = nothing pending.
+let pendingImport = null;
+
+// Splits CSV text into rows of cells, following the same quoting rules the export uses:
+// a cell in "quotes" may contain commas and line breaks, and "" inside quotes means one ".
+// We go through the text one character at a time, remembering whether we're inside quotes.
+function parseCsv(text) {
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1); // drop the byte order mark
+
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; } // "" -> "
+      else if (ch === '"') inQuotes = false;                       // closing quote
+      else cell += ch;                                             // anything else, even , or a line break
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ',') {
+      row.push(cell); cell = '';                                   // end of a cell
+    } else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;                // treat \r\n as one line break
+      row.push(cell); rows.push(row); row = []; cell = '';         // end of a row
+    } else {
+      cell += ch;
+    }
+  }
+  if (cell !== '' || row.length > 0) { row.push(cell); rows.push(row); } // last row without a final line break
+  return rows;
+}
+
+// Accepts "2026-10-15" (our export) and "10/15/2026" (how Excel often re-saves dates: month/day/year).
+// Returns "YYYY-MM-DD", or null if it isn't a real date (e.g. 2026-02-30).
+function parseImportDate(value) {
+  const text = value.trim();
+  let year, month, day, match;
+  if ((match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) {
+    [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  } else if ((match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) {
+    [month, day, year] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  } else {
+    return null;
+  }
+  // new Date() quietly "fixes" impossible dates (Feb 30 -> Mar 2), so check it didn't change
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+// Accepts "1200.50", "1,200.50", "₱1,200.50" or "PHP 1200". Returns a number > 0, or null.
+function parseImportAmount(value) {
+  const cleaned = value.replace(/^\s*PHP/i, '').replace(/[₱,\s]/g, '');
+  if (!/^\d+(\.\d+)?$/.test(cleaned)) return null;
+  const amount = Math.round(Number(cleaned) * 100) / 100;
+  return amount > 0 ? amount : null;
+}
+
+// Reads the chosen file and checks every row. Never saves anything itself.
+async function readImportFile(file) {
+  if (file.size > MAX_IMPORT_BYTES) {
+    return { fileName: file.name, items: [], problems: ['This file is too big (over 1 MB). Is it the right file?'] };
+  }
+
+  const text = await file.text();
+  const rows = parseCsv(text).filter((cells) => cells.some((c) => c.trim() !== '')); // skip blank lines
+  if (rows.length === 0) {
+    return { fileName: file.name, items: [], problems: ['The file is empty.'] };
+  }
+
+  // Find columns by their NAME in the first row, so a sheet with columns moved around still works
+  const header = rows[0].map((name) => name.trim().toLowerCase());
+  const col = {};
+  for (const name of CSV_COLUMNS) col[name] = header.indexOf(name); // -1 = column not there
+  const missing = ['date', 'category', 'amount'].filter((name) => col[name] === -1);
+  if (missing.length > 0) {
+    return {
+      fileName: file.name,
+      items: [],
+      problems: [`Missing column(s): ${missing.join(', ')}. The first row must name the columns: date, category, amount, note.`],
+    };
+  }
+
+  const categories = categoryOrder();
+  const items = [];
+  const problems = [];
+  const seenIds = new Set();
+  let otherCount = 0;
+
+  rows.slice(1).forEach((cells, index) => {
+    const rowNumber = index + 2; // +2 because the header is row 1, like in a spreadsheet
+    const cell = (name) => (col[name] === -1 ? '' : cells[col[name]] ?? '');
+
+    const date = parseImportDate(cell('date'));
+    const amount = parseImportAmount(cell('amount'));
+    if (!date) { problems.push(`Row ${rowNumber}: "${cell('date')}" is not a valid date.`); return; }
+    if (amount === null) { problems.push(`Row ${rowNumber}: "${cell('amount')}" is not a valid amount.`); return; }
+
+    // Match the category ignoring upper/lower case; unknown ones go under "Other"
+    let category = categories.find((c) => c.toLowerCase() === cell('category').trim().toLowerCase());
+    if (!category) { category = 'Other'; otherCount++; }
+
+    // Undo the export's formula protection ('=... -> =...), tidy up, and respect the 200-character limit
+    let note = cell('note');
+    if (/^'[=+\-@]/.test(note)) note = note.slice(1);
+    note = note.trim().slice(0, noteInput.maxLength);
+
+    // Keep the id from the file if it looks like one of ours, otherwise make a new one
+    let id = cell('id').trim();
+    if (!/^[\w-]{1,40}$/.test(id)) id = makeId();
+    if (seenIds.has(id)) { problems.push(`Row ${rowNumber}: same id as an earlier row, skipped.`); return; }
+    seenIds.add(id);
+
+    items.push({ id, amount, category, date, note });
+  });
+
+  return { fileName: file.name, items, problems, otherCount };
+}
+
+// Shows what was found in the file and the choices
+function showImportPreview(result) {
+  pendingImport = result;
+  importPreview.hidden = false;
+  backupStatus.textContent = '';
+
+  const existingIds = new Set(expenses.map((e) => e.id));
+  const newCount = result.items.filter((e) => !existingIds.has(e.id)).length;
+  const alreadyCount = result.items.length - newCount;
+
+  if (result.items.length === 0) {
+    importSummary.textContent = `Couldn't import anything from ${result.fileName}.`;
+  } else {
+    let summary = `${result.fileName}: found ${countLabel(result.items.length)} ` +
+      `(${newCount} new, ${alreadyCount} already in the app).`;
+    if (result.otherCount > 0) summary += ` ${result.otherCount} with an unknown category will be filed under Other.`;
+    if (expenses.length > 0) summary += ` "Replace all" deletes your current ${countLabel(expenses.length)} first.`;
+    importSummary.textContent = summary;
+  }
+
+  // List the problems (at most 5, so a badly broken file doesn't fill the screen)
+  importProblems.innerHTML = '';
+  for (const problem of result.problems.slice(0, 5)) {
+    importProblems.append(makeElement('li', '', problem));
+  }
+  if (result.problems.length > 5) {
+    importProblems.append(makeElement('li', '', `…and ${result.problems.length - 5} more rows skipped.`));
+  }
+
+  // Only offer the choices that make sense
+  importMergeBtn.hidden = result.items.length === 0;
+  importMergeBtn.disabled = newCount === 0;
+  importMergeBtn.textContent = newCount === 0 ? 'Nothing new to add' : `Add ${newCount} new`;
+  importReplaceBtn.hidden = result.items.length === 0;
+  importReplaceBtn.textContent = 'Replace all';
+  importReplaceBtn.className = 'btn btn-danger';
+  replaceArmed = false;
+  importCancelBtn.textContent = result.items.length === 0 ? 'Close' : 'Cancel';
+}
+
+// "Replace all" deletes your current expenses, so (like Delete) it needs a second click
+let replaceArmed = false;
+
+function onReplaceClick() {
+  if (!replaceArmed && expenses.length > 0) {
+    replaceArmed = true;
+    importReplaceBtn.textContent = `Yes, replace my ${countLabel(expenses.length)}`;
+    importReplaceBtn.className = 'btn btn-danger-solid';
+    return;
+  }
+  applyImport('replace');
+}
+
+function closeImportPreview() {
+  pendingImport = null;
+  importPreview.hidden = true;
+  importFile.value = ''; // so picking the same file again still triggers "change"
+}
+
+// mode: "merge" = keep everything you have and add the expenses that are new;
+//       "replace" = throw away what you have and use exactly what's in the file.
+function applyImport(mode) {
+  if (!pendingImport) return;
+  const { items } = pendingImport;
+  let message;
+
+  if (mode === 'merge') {
+    const existingIds = new Set(expenses.map((e) => e.id));
+    const newOnes = items.filter((e) => !existingIds.has(e.id));
+    expenses = expenses.concat(newOnes);
+    message = `Added ${countLabel(newOnes.length)} from the file.`;
+  } else {
+    expenses = items;
+    message = `Replaced your expenses with the ${countLabel(items.length)} from the file.`;
+  }
+
+  // Leave edit mode / any open "Delete this?" in case those expenses changed
+  confirmingDeleteId = null;
+  if (editingId) resetForm();
+
+  saveExpenses(expenses); // same pattern as always: change, save, redraw
+  renderList();
+  closeImportPreview();
+  backupStatus.textContent = message;
+}
+
 // ===== 6. Actions =====
 function addExpense(expense) {
   expenses.push(expense);
@@ -643,6 +866,25 @@ filterCategory.addEventListener('change', function () {
 });
 
 exportBtn.addEventListener('click', exportCsv);
+
+// The Import button opens the hidden file picker
+importBtn.addEventListener('click', () => importFile.click());
+
+// "change" fires once a file has been picked. "async" lets us "await" reading the file.
+importFile.addEventListener('change', async function () {
+  const file = importFile.files[0];
+  if (!file) return;
+  try {
+    showImportPreview(await readImportFile(file));
+  } catch (error) {
+    console.warn('Import failed:', error);
+    showImportPreview({ fileName: file.name, items: [], problems: ['This file could not be read.'] });
+  }
+});
+
+importMergeBtn.addEventListener('click', () => applyImport('merge'));
+importReplaceBtn.addEventListener('click', onReplaceClick);
+importCancelBtn.addEventListener('click', closeImportPreview);
 
 // ===== 8. Start-up =====
 fillCategoryFilter();
