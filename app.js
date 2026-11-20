@@ -1,9 +1,12 @@
 // ===== 1. Find the HTML elements we need (using their id "name tags") =====
 const form = document.getElementById('expense-form');
+const formTitle = document.getElementById('form-title');
 const amountInput = document.getElementById('amount');
 const categoryInput = document.getElementById('category');
 const dateInput = document.getElementById('date');
 const noteInput = document.getElementById('note');
+const submitBtn = document.getElementById('submit-btn');
+const cancelBtn = document.getElementById('cancel-btn');
 const list = document.getElementById('expense-list');
 const emptyMessage = document.getElementById('empty-message');
 
@@ -40,6 +43,9 @@ function saveExpenses(list) {
 // We start with whatever was saved last time.
 let expenses = loadExpenses();
 
+// Which expense is being edited right now. null = we're adding a new one.
+let editingId = null;
+
 // ===== 4. Helpers =====
 
 // Today's date as "YYYY-MM-DD" in YOUR time zone.
@@ -57,6 +63,17 @@ function makeId() {
   return Date.now() + '-' + Math.random().toString(36).slice(2, 6);
 }
 
+// Builds one row button. data-action says WHAT it does, data-id says WHICH expense.
+function makeRowButton(label, action, expense) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = label;
+  button.dataset.action = action;   // becomes data-action="edit" / "delete"
+  button.dataset.id = expense.id;   // becomes data-id="1795...-ab12"
+  button.setAttribute('aria-label', `${label} ${expense.category} expense of ₱${expense.amount.toFixed(2)}`);
+  return button;
+}
+
 // ===== 5. Render: draw the expenses array onto the page =====
 function renderList() {
   list.innerHTML = ''; // clear the old list, then rebuild it from the array
@@ -72,15 +89,11 @@ function renderList() {
       `₱${expense.amount.toFixed(2)} · ${expense.category} · ${expense.date}` +
       (expense.note ? ` · ${expense.note}` : '');
 
-    // The Delete button. data-id stores WHICH expense this button belongs to.
-    const deleteBtn = document.createElement('button');
-    deleteBtn.type = 'button';
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.dataset.action = 'delete'; // becomes data-action="delete"
-    deleteBtn.dataset.id = expense.id;   // becomes data-id="1795...-ab12"
-    deleteBtn.setAttribute('aria-label', `Delete ${expense.category} expense of ₱${expense.amount.toFixed(2)}`);
-
-    item.append(text, ' ', deleteBtn);
+    item.append(
+      text, ' ',
+      makeRowButton('Edit', 'edit', expense), ' ',
+      makeRowButton('Delete', 'delete', expense)
+    );
     list.appendChild(item);
   }
 
@@ -95,6 +108,14 @@ function addExpense(expense) {
   renderList();
 }
 
+function updateExpense(id, changes) {
+  // map() makes a NEW array: the matching expense is replaced by an updated
+  // copy ({...old, ...changes} = old fields, overwritten by the changed ones)
+  expenses = expenses.map((e) => (e.id === id ? { ...e, ...changes } : e));
+  saveExpenses(expenses); // same pattern: change, save, redraw
+  renderList();
+}
+
 function deleteExpense(id) {
   const expense = expenses.find((e) => e.id === id);
   if (!expense) return;
@@ -103,10 +124,43 @@ function deleteExpense(id) {
   const ok = confirm(`Delete ₱${expense.amount.toFixed(2)} (${expense.category}) on ${expense.date}?`);
   if (!ok) return;
 
+  // If we were editing this one, leave edit mode first
+  if (editingId === id) resetForm();
+
   // filter() makes a NEW array that keeps every expense EXCEPT this one
   expenses = expenses.filter((e) => e.id !== id);
-  saveExpenses(expenses); // same pattern: change, save, redraw
+  saveExpenses(expenses);
   renderList();
+}
+
+// Switch the form into "edit mode" and fill it with the expense's values
+function startEdit(id) {
+  const expense = expenses.find((e) => e.id === id);
+  if (!expense) return;
+
+  editingId = id;
+  amountInput.value = expense.amount;
+  categoryInput.value = expense.category;
+  dateInput.value = expense.date;
+  noteInput.value = expense.note;
+
+  formTitle.textContent = 'Edit expense';
+  submitBtn.textContent = 'Save changes';
+  cancelBtn.hidden = false;
+
+  form.scrollIntoView({ behavior: 'smooth' }); // on phones the form may be off-screen
+  amountInput.focus();
+}
+
+// Back to "add mode" with an empty form
+function resetForm() {
+  editingId = null;
+  form.reset();
+  dateInput.value = todayString();
+
+  formTitle.textContent = 'Add expense';
+  submitBtn.textContent = 'Add expense';
+  cancelBtn.hidden = true;
 }
 
 // ===== 7. Events: react to what the user does =====
@@ -126,21 +180,28 @@ form.addEventListener('submit', function (event) {
     return;
   }
 
-  addExpense({
-    id: makeId(),
+  const values = {
     amount: Math.round(amount * 100) / 100, // keep 2 decimal places
     category: categoryInput.value,
     date: dateInput.value,
     note: noteInput.value.trim(),
-  });
+  };
+
+  // Same form, two jobs: update if we're editing, otherwise add
+  if (editingId) {
+    updateExpense(editingId, values);
+  } else {
+    addExpense({ id: makeId(), ...values });
+  }
 
   // Get the form ready for the next expense
-  form.reset();
-  dateInput.value = todayString();
+  resetForm();
   amountInput.focus();
 });
 
-// ONE click listener on the whole list handles every Delete button
+cancelBtn.addEventListener('click', resetForm);
+
+// ONE click listener on the whole list handles every Edit and Delete button
 // (this is called "event delegation"). It still works for rows that are
 // added later, because the list itself never gets replaced.
 list.addEventListener('click', function (event) {
@@ -148,11 +209,13 @@ list.addEventListener('click', function (event) {
   const button = event.target.closest('button[data-action]');
   if (!button) return;
 
-  if (button.dataset.action === 'delete') {
+  if (button.dataset.action === 'edit') {
+    startEdit(button.dataset.id);
+  } else if (button.dataset.action === 'delete') {
     deleteExpense(button.dataset.id);
   }
 });
 
 // ===== 8. Start-up =====
-dateInput.value = todayString(); // pre-fill today's date
+resetForm(); // start in "add mode" with today's date
 renderList();
