@@ -112,6 +112,23 @@
       <p id="empty-message" class="empty">No expenses yet. Add your first one using the form.</p>
       <ul id="expense-list" class="expense-list"></ul>
     </section>
+
+    <!-- 3. Spending chart: plain HTML bars that app.js draws (no chart library) -->
+    <section class="card chart-card" aria-labelledby="chart-title">
+      <h2 id="chart-title">Spending chart</h2>
+      <p class="chart-note">All your expenses. Not affected by the filters above.</p>
+      <p id="chart-empty" class="empty">Add expenses to see your spending chart.</p>
+
+      <div id="chart-content">
+        <h3 class="chart-subtitle">By month</h3>
+        <div id="month-chart" class="bar-chart"></div>
+        <!-- Which color is which category -->
+        <ul id="chart-legend" class="legend"></ul>
+
+        <h3 class="chart-subtitle">By category</h3>
+        <div id="category-chart" class="bar-chart"></div>
+      </div>
+    </section>
   </main>
 
   <!-- "defer" = run the script after the HTML above has loaded -->

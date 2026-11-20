@@ -15,6 +15,18 @@
   --badge-bg: #e3f1ec;
   --badge-text: #1f6f5c;
 
+  /* Chart colors: one per category, chosen to be easy to tell apart.
+     The names must match the categories in lowercase (app.js builds "--cat-" + "food"). */
+  --cat-food: #e07a1f;          /* orange */
+  --cat-transport: #2f7ed8;     /* blue */
+  --cat-bills: #8e5bd6;         /* purple */
+  --cat-shopping: #d6457a;      /* pink */
+  --cat-health: #2a9d6f;        /* green */
+  --cat-entertainment: #c99a06; /* amber */
+  --cat-school: #1a9fb0;        /* teal */
+  --cat-other: #7a828c;         /* grey */
+  --track: #eceef1;             /* the empty lane behind each bar */
+
   --radius: 12px;
   --gap: 16px;
   --tap: 44px;            /* minimum height for anything you tap (finger-sized) */
@@ -34,6 +46,17 @@
     --danger: #f2877d;
     --badge-bg: #1f3a33;
     --badge-text: #8fd6c2;
+
+    /* Slightly brighter chart colors so they stand out on a dark background */
+    --cat-food: #f2994a;
+    --cat-transport: #5a9df0;
+    --cat-bills: #a984e8;
+    --cat-shopping: #ec6d9b;
+    --cat-health: #4cc293;
+    --cat-entertainment: #e6bb2e;
+    --cat-school: #3fc0d0;
+    --cat-other: #9aa2ac;
+    --track: #2a2e33;
   }
 }
 
@@ -146,6 +169,11 @@ h2 {
   .layout {
     grid-template-columns: 320px 1fr; /* form: fixed width, list: the rest */
     align-items: start;
+  }
+
+  /* The chart gets the full width underneath: "1 / -1" = from the first column line to the last */
+  .chart-card {
+    grid-column: 1 / -1;
   }
 }
 
@@ -391,4 +419,95 @@ select {
 .expense-actions {
   display: flex;
   gap: 8px;
+}
+
+/* =========================================================
+   8. Spending chart
+   ========================================================= */
+.chart-card h2 {
+  margin-bottom: 4px;
+}
+
+.chart-note {
+  margin: 0 0 var(--gap);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.chart-subtitle {
+  margin: var(--gap) 0 8px;
+  font-size: 0.9375rem;
+}
+
+#chart-content > .chart-subtitle:first-child {
+  margin-top: 0;
+}
+
+.bar-chart {
+  display: grid;
+  gap: 12px;
+}
+
+/* "Nov 2026 ............ ₱11,350.00" above each bar */
+.chart-row-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.875rem;
+  margin-bottom: 4px;
+}
+
+.chart-amount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The lane: full width, light grey. The bar inside it gets its width from app.js */
+.bar-track {
+  height: 14px;
+  background: var(--track);
+  border-radius: 999px;
+  overflow: hidden; /* clips the bar's corners into the rounded lane */
+}
+
+.bar {
+  display: flex;    /* lets the colored pieces sit side by side and share the width */
+  height: 100%;
+  min-width: 6px;   /* even a tiny amount stays visible */
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar-piece {
+  flex-basis: 0;    /* start every piece at 0 width; flex-grow (set in app.js) shares out the rest */
+  min-width: 3px;   /* a very small category still shows as a sliver */
+}
+
+/* A thin gap between pieces so neighbouring colors don't blur together */
+.bar-piece + .bar-piece {
+  border-left: 2px solid var(--surface);
+}
+
+/* Legend: colored dots with category names, wrapping onto new lines as needed */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }

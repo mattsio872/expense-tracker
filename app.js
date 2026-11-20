@@ -17,6 +17,11 @@ const filterCategory = document.getElementById('filter-category');
 const filterSummary = document.getElementById('filter-summary');
 const listTotalBox = document.getElementById('list-total-box');
 const listTotal = document.getElementById('list-total');
+const chartEmpty = document.getElementById('chart-empty');
+const chartContent = document.getElementById('chart-content');
+const monthChart = document.getElementById('month-chart');
+const chartLegend = document.getElementById('chart-legend');
+const categoryChart = document.getElementById('category-chart');
 
 // ===== 2. Storage: save and load with localStorage =====
 // localStorage is a small storage area in the browser. It only stores TEXT,
@@ -276,6 +281,129 @@ function renderList() {
     ? `Showing ${visible.length} of ${countLabel(expenses.length)}`
     : countLabel(expenses.length);
   filterSummary.hidden = expenses.length === 0;
+
+  // The chart uses the same data, so redraw it whenever the list is redrawn
+  renderChart();
+}
+
+// ===== 5b. Render the chart: bars are just <div>s with a width in % =====
+
+// Each category's color lives in style.css as a variable, e.g. --cat-food.
+// This turns "Food" into "var(--cat-food)". Unknown categories fall back to the "Other" color.
+function categoryColor(category) {
+  return `var(--cat-${category.toLowerCase()}, var(--cat-other))`;
+}
+
+// Categories in the same order as the form's dropdown, so colors always appear in the same order
+function categoryOrder() {
+  return [...categoryInput.options].map((option) => option.value);
+}
+
+// Adds up amounts into groups. Example: sumBy(expenses, monthOf)
+//   -> Map { "2026-11" => 11350, "2026-10" => 850 }
+// A Map is like an object made for "key -> value" lookups.
+function sumBy(items, getKey) {
+  const totals = new Map();
+  for (const item of items) {
+    const key = getKey(item);
+    totals.set(key, (totals.get(key) || 0) + item.amount);
+  }
+  return totals;
+}
+
+// One chart row: a label line ("Nov 2026 ...... ₱11,350.00") with a bar underneath.
+// widthPercent: how long the bar is compared to the biggest one (100 = full width)
+function makeChartRow(label, amountText, widthPercent) {
+  const row = makeElement('div', 'chart-row', '');
+  const labels = makeElement('div', 'chart-row-label', '');
+  labels.append(makeElement('span', '', label), makeElement('span', 'chart-amount', amountText));
+
+  const track = makeElement('div', 'bar-track', ''); // the light grey "lane" the bar sits in
+  const bar = makeElement('div', 'bar', '');
+  bar.style.width = `${widthPercent}%`;
+  track.append(bar);
+
+  row.append(labels, track);
+  return { row, bar };
+}
+
+function renderChart() {
+  const hasData = expenses.length > 0;
+  chartEmpty.hidden = hasData;
+  chartContent.hidden = !hasData;
+  if (!hasData) return;
+
+  const order = categoryOrder();
+
+  // --- By month: one bar per month, split into colored pieces by category ---
+  monthChart.innerHTML = '';
+  const monthTotals = sumBy(expenses, monthOf);
+  const biggestMonth = Math.max(...monthTotals.values()); // the longest bar = 100%
+  const months = [...monthTotals.keys()].sort().reverse(); // newest first, like the list
+
+  for (const month of months) {
+    const monthExpenses = expenses.filter((e) => monthOf(e) === month);
+    const byCategory = sumBy(monthExpenses, (e) => e.category);
+    const monthTotal = monthTotals.get(month);
+
+    const { row, bar } = makeChartRow(
+      formatMonth(month),
+      formatPeso(monthTotal),
+      (monthTotal / biggestMonth) * 100
+    );
+
+    // Each piece gets "flex-grow" equal to its amount, so the pieces share the bar
+    // in proportion: ₱10,000 gets 10× more room than ₱1,000.
+    const breakdown = [];
+    for (const category of order) {
+      const amount = byCategory.get(category);
+      if (!amount) continue;
+      const piece = makeElement('span', 'bar-piece', '');
+      piece.style.flexGrow = amount;
+      piece.style.background = categoryColor(category);
+      piece.title = `${category}: ${formatPeso(amount)}`; // shows when you hover with a mouse
+      bar.append(piece);
+      breakdown.push(`${category} ${formatPeso(amount)}`);
+    }
+
+    // Screen readers can't "see" colors, so give them the breakdown as text
+    row.append(makeElement('span', 'visually-hidden', `Breakdown: ${breakdown.join(', ')}`));
+    monthChart.append(row);
+  }
+
+  // --- Legend: a colored dot + name for each category that has spending ---
+  const categoryTotals = sumBy(expenses, (e) => e.category);
+  chartLegend.innerHTML = '';
+  for (const category of order) {
+    if (!categoryTotals.has(category)) continue;
+    const item = makeElement('li', 'legend-item', '');
+    const swatch = makeElement('span', 'legend-swatch', '');
+    swatch.style.background = categoryColor(category);
+    item.append(swatch, category);
+    chartLegend.append(item);
+  }
+
+  // --- By category: one bar per category, biggest first, with its share of the total ---
+  categoryChart.innerHTML = '';
+  const grandTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const biggestCategory = Math.max(...categoryTotals.values());
+  const categories = [...categoryTotals.keys()].sort(
+    (a, b) => categoryTotals.get(b) - categoryTotals.get(a)
+  );
+
+  for (const category of categories) {
+    const amount = categoryTotals.get(category);
+    const percent = Math.round((amount / grandTotal) * 100);
+    // A real but tiny share would round to "0%", which looks wrong, so say "<1%" instead
+    const percentText = percent === 0 ? '<1%' : `${percent}%`;
+    const { row, bar } = makeChartRow(
+      category,
+      `${formatPeso(amount)} · ${percentText}`,
+      (amount / biggestCategory) * 100
+    );
+    bar.style.background = categoryColor(category);
+    categoryChart.append(row);
+  }
 }
 
 // ===== 6. Actions =====
