@@ -22,6 +22,8 @@ const chartContent = document.getElementById('chart-content');
 const monthChart = document.getElementById('month-chart');
 const chartLegend = document.getElementById('chart-legend');
 const categoryChart = document.getElementById('category-chart');
+const exportBtn = document.getElementById('export-btn');
+const backupStatus = document.getElementById('backup-status');
 
 // ===== 2. Storage: save and load with localStorage =====
 // localStorage is a small storage area in the browser. It only stores TEXT,
@@ -299,6 +301,9 @@ function renderList() {
 
   // The chart uses the same data, so redraw it whenever the list is redrawn
   renderChart();
+
+  // Nothing to export yet? Grey out the button.
+  exportBtn.disabled = expenses.length === 0;
 }
 
 // ===== 5b. Render the chart: bars are just <div>s with a width in % =====
@@ -419,6 +424,71 @@ function renderChart() {
     bar.style.background = categoryColor(category);
     categoryChart.append(row);
   }
+}
+
+// ===== 5c. Backup: export to a CSV file =====
+// CSV = "comma-separated values": a plain text table, one row per line, cells split by commas.
+// Excel and Google Sheets open it as a spreadsheet. Our file looks like:
+//   date,category,amount,note,id
+//   2026-10-15,Food,850.00,davids teahouse,1795202170826-wxrf
+// The id column lets the import step (next) recognise expenses it already has.
+
+const CSV_COLUMNS = ['date', 'category', 'amount', 'note', 'id'];
+
+// Makes one value safe to put in a CSV cell.
+function csvCell(value) {
+  let text = String(value);
+
+  // Spreadsheet safety: a cell starting with = + - or @ is treated as a FORMULA by Excel,
+  // so a note like "=HYPERLINK(...)" could run when the file is opened ("CSV injection").
+  // A leading ' tells the spreadsheet "this is just text". Import will remove it again.
+  if (/^[=+\-@]/.test(text)) {
+    text = "'" + text;
+  }
+
+  // A comma, quote or line break inside the text would break the columns,
+  // so wrap the cell in quotes and double any quotes inside: He said "hi" -> "He said ""hi"""
+  if (/[",\r\n]/.test(text)) {
+    text = '"' + text.replace(/"/g, '""') + '"';
+  }
+  return text;
+}
+
+function expensesToCsv(list) {
+  // Oldest first: spreadsheets usually read top-to-bottom in time order
+  const rows = [...list].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+
+  const lines = [CSV_COLUMNS.join(',')]; // the header row
+  for (const e of rows) {
+    // amount as a plain number with 2 decimals (no ₱, no commas) so spreadsheets can add it up
+    lines.push([e.date, e.category, e.amount.toFixed(2), e.note, e.id].map(csvCell).join(','));
+  }
+  // \r\n line endings are what Excel expects
+  return lines.join('\r\n') + '\r\n';
+}
+
+// Hands a text file to the browser as a download, without any server:
+// 1. wrap the text in a Blob (a file that only exists in memory),
+// 2. give it a temporary URL, 3. "click" an invisible link to it, 4. clean up.
+function downloadTextFile(fileName, text, mimeType) {
+  // ﻿ (a "byte order mark") at the start tells Excel the file is UTF-8,
+  // so characters like ñ or ₱ in notes don't turn into gibberish.
+  const blob = new Blob(['﻿' + text], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName; // the "download" attribute = save it instead of opening it
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000); // free the memory a moment later
+}
+
+function exportCsv() {
+  if (expenses.length === 0) return;
+  const fileName = `expenses-${todayString()}.csv`;
+  downloadTextFile(fileName, expensesToCsv(expenses), 'text/csv;charset=utf-8');
+  backupStatus.textContent = `Exported ${countLabel(expenses.length)} to ${fileName}.`;
 }
 
 // ===== 6. Actions =====
@@ -571,6 +641,8 @@ filterCategory.addEventListener('change', function () {
   saveFilters(filters);
   renderList();
 });
+
+exportBtn.addEventListener('click', exportCsv);
 
 // ===== 8. Start-up =====
 fillCategoryFilter();

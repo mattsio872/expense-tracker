@@ -129,6 +129,17 @@
         <div id="category-chart" class="bar-chart"></div>
       </div>
     </section>
+
+    <!-- 4. Backup: save all expenses to a CSV file (and, in the next step, load them back) -->
+    <section class="card backup-card" aria-labelledby="backup-title">
+      <h2 id="backup-title">Backup</h2>
+      <p class="card-note">Save all your expenses as a CSV file. It opens in Excel or Google Sheets.</p>
+      <div class="backup-actions">
+        <button type="button" id="export-btn" class="btn btn-primary">Export CSV</button>
+      </div>
+      <!-- e.g. "Exported 4 expenses to expenses-2026-11-21.csv" -->
+      <p id="backup-status" class="summary backup-status" aria-live="polite"></p>
+    </section>
   </main>
 
   <!-- "defer" = run the script after the HTML above has loaded -->

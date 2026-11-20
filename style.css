@@ -172,7 +172,8 @@ h2 {
   }
 
   /* The chart gets the full width underneath: "1 / -1" = from the first column line to the last */
-  .chart-card {
+  .chart-card,
+  .backup-card {
     grid-column: 1 / -1;
   }
 }
@@ -449,7 +450,8 @@ select {
   margin-bottom: 4px;
 }
 
-.chart-note {
+.chart-note,
+.card-note {
   margin: 0 0 var(--gap);
   font-size: 0.875rem;
   color: var(--muted);
@@ -531,4 +533,30 @@ select {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+}
+
+/* =========================================================
+   9. Backup (CSV export / import)
+   ========================================================= */
+.backup-card h2 {
+  margin-bottom: 4px;
+}
+
+.backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.backup-status {
+  margin: 12px 0 0;
+}
+
+.backup-status:empty {
+  display: none; /* no gap under the buttons until there's a message */
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
