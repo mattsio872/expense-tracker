@@ -22,6 +22,7 @@ const chartContent = document.getElementById('chart-content');
 const monthChart = document.getElementById('month-chart');
 const chartLegend = document.getElementById('chart-legend');
 const categoryChart = document.getElementById('category-chart');
+const exportMonth = document.getElementById('export-month');
 const exportBtn = document.getElementById('export-btn');
 const backupStatus = document.getElementById('backup-status');
 const importBtn = document.getElementById('import-btn');
@@ -175,22 +176,36 @@ function fillCategoryFilter() {
 
 // Rebuild the month filter from the months that actually have expenses (newest first).
 // Runs on every render, because adding/editing/deleting can create or remove a month.
-function updateMonthOptions() {
+// The months that have at least one expense, newest first, e.g. ["2026-11", "2026-10"]
+function monthsWithExpenses() {
   // A Set keeps only unique values: ["2026-11", "2026-11", "2026-10"] -> {"2026-11", "2026-10"}
-  const months = [...new Set(expenses.map(monthOf))].sort().reverse();
+  return [...new Set(expenses.map(monthOf))].sort().reverse();
+}
+
+// Fills a month dropdown with "All months" + each month, and selects `selected`.
+// Used by both the list filter and the export picker, so they always show the same months.
+function fillMonthSelect(select, months, selected) {
+  select.innerHTML = '';
+  select.add(new Option('All months', 'all'));
+  for (const month of months) {
+    select.add(new Option(formatMonth(month), month));
+  }
+  select.value = selected;
+}
+
+function updateMonthOptions() {
+  const months = monthsWithExpenses();
 
   // If the chosen month has no expenses any more (e.g. you deleted the last one), show all months
   if (filters.month !== 'all' && !months.includes(filters.month)) {
     filters.month = 'all';
     saveFilters(filters);
   }
+  fillMonthSelect(filterMonth, months, filters.month);
 
-  filterMonth.innerHTML = '';
-  filterMonth.add(new Option('All months', 'all'));
-  for (const month of months) {
-    filterMonth.add(new Option(formatMonth(month), month));
-  }
-  filterMonth.value = filters.month;
+  // The export picker: keep its choice if that month still has expenses, otherwise "All months"
+  const exportChoice = months.includes(exportMonth.value) ? exportMonth.value : 'all';
+  fillMonthSelect(exportMonth, months, exportChoice);
 }
 
 // Shows "45 / 200" under the note, so the limit is never a surprise.
@@ -493,10 +508,16 @@ function downloadTextFile(fileName, text, mimeType) {
 }
 
 function exportCsv() {
-  if (expenses.length === 0) return;
-  const fileName = `expenses-${todayString()}.csv`;
-  downloadTextFile(fileName, expensesToCsv(expenses), 'text/csv;charset=utf-8');
-  backupStatus.textContent = `Exported ${countLabel(expenses.length)} to ${fileName}.`;
+  const month = exportMonth.value; // "all" or e.g. "2026-11"
+  const toExport = month === 'all' ? expenses : expenses.filter((e) => monthOf(e) === month);
+  if (toExport.length === 0) return;
+
+  // File name says what's inside: a full backup is dated today, a single month is named after the month
+  const fileName = month === 'all' ? `expenses-${todayString()}.csv` : `expenses-${month}.csv`;
+  downloadTextFile(fileName, expensesToCsv(toExport), 'text/csv;charset=utf-8');
+
+  const which = month === 'all' ? 'all months' : formatMonth(month);
+  backupStatus.textContent = `Exported ${countLabel(toExport.length)} (${which}) to ${fileName}.`;
 }
 
 // ===== 5d. Backup: import from a CSV file =====

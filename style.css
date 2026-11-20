@@ -548,6 +548,12 @@ select {
   gap: 8px;
 }
 
+/* The month picker above the Export/Import buttons: not wider than it needs to be */
+.export-month {
+  max-width: 260px;
+  margin-bottom: 12px;
+}
+
 .backup-status {
   margin: 12px 0 0;
 }

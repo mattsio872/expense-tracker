@@ -134,6 +134,13 @@
     <section class="card backup-card" aria-labelledby="backup-title">
       <h2 id="backup-title">Backup</h2>
       <p class="card-note">Save all your expenses as a CSV file (opens in Excel or Google Sheets), or load them back from one.</p>
+      <!-- Which month to export. app.js fills in the months that have expenses. -->
+      <div class="field export-month">
+        <label for="export-month">Month to export</label>
+        <select id="export-month">
+          <option value="all">All months</option>
+        </select>
+      </div>
       <div class="backup-actions">
         <button type="button" id="export-btn" class="btn btn-primary">Export CSV</button>
         <button type="button" id="import-btn" class="btn">Import CSV</button>
