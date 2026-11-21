@@ -18,10 +18,11 @@
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Expenses">
-  <!-- "?v=2" is a version number. Browsers keep a saved copy of style.css and app.js for a while,
-       so after changing either file, add 1 here AND on the app.js link below. The new number makes
-       the browser treat it as a new file and download it, instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=2">
+  <!-- "?v=3" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+       style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
+       AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
+       instead of mixing new HTML with old CSS/JS. -->
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
   <header class="app-header">
@@ -177,6 +178,6 @@
   </main>
 
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=2" defer></script>
+  <script src="app.js?v=3" defer></script>
 </body>
 </html>

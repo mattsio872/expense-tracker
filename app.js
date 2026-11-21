@@ -908,6 +908,16 @@ importReplaceBtn.addEventListener('click', onReplaceClick);
 importCancelBtn.addEventListener('click', closeImportPreview);
 
 // ===== 8. Start-up =====
+
+// Register the service worker (sw.js), which saves the app's files so it opens offline.
+// Older browsers without service workers simply skip this; the app still works online.
+// It fails when you open index.html by double-clicking (file://), which is fine: it needs a web address.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch((error) => {
+    console.warn('Offline support not available here:', error.message);
+  });
+}
+
 fillCategoryFilter();
 resetForm(); // start in "add mode" with today's date
 renderList();

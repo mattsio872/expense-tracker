@@ -30,7 +30,14 @@ That's it. If you change the code, refresh the page (**Ctrl + F5** forces the br
 
 The live version at **https://mattsio872.github.io/expense-tracker/** is served by GitHub Pages straight from the `main` branch. Every `git push` to `main` updates the live site automatically, usually within 1–2 minutes.
 
-> **When you change `style.css` or `app.js`:** raise the `?v=` number on both links in `index.html` (e.g. `?v=2` → `?v=3`). Browsers keep saved copies of those files for about 10 minutes, and without a new number a phone can end up mixing the new page with the old CSS or JavaScript.
+> **When you change any app file (`style.css`, `app.js`, images…):** raise the version number in **three** places, all to the same number: the `?v=` on the `style.css` and `app.js` links in `index.html`, and `VERSION` at the top of `sw.js` (e.g. 3 → 4). Browsers and the service worker keep saved copies of the files; a new number makes the new versions download instead of mixing new and old files.
+
+### Installable app and offline use (PWA)
+
+- `manifest.webmanifest` gives the app its name, icon and colors, so it can be installed (Chrome: **Install** in the address bar; Android: **⋮ → Install app**; iPhone Safari: **Share → Add to Home Screen**).
+- `sw.js` is a **service worker**: it saves the app's files so it opens with no internet. The page is fetched **network-first** (newest version when online, saved copy when offline); CSS, JS and images are **cache-first** (they have version numbers, so a new version is a new address).
+- **How updates reach your phone:** the next time you open the app online, it gets the new page straight from the internet, and the new page asks for the new `?v=` files, which are downloaded and saved. The browser also notices `sw.js` changed, installs the new version, and deletes the old saved files. If the app was already open, pull down to refresh (or close and reopen it).
+- Offline mode does **not** need a server: your expenses are still in localStorage on the device.
 
 ## Files
 
