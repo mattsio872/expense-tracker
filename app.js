@@ -1027,7 +1027,10 @@ function openSheet(id) {
   sheet.querySelector('.sheet-scroll').scrollTop = 0;
   // A new expense starts with the number keyboard up. (Editing doesn't: you may only
   // want to change the category, and the keyboard would cover the sheet.)
-  if (!expense) amountInput.focus();
+  // Editing focuses the sheet itself: screen readers start at its title, and no focus ring
+  // appears on the × (which is what the browser would pick on its own).
+  if (expense) sheet.focus();
+  else amountInput.focus();
 }
 
 function closeSheet() {
@@ -1203,6 +1206,7 @@ settingsBtn.addEventListener('click', function () {
   budgetInput.value = budget === null ? '' : String(budget);
   showBudgetError(false);
   settingsSheet.showModal();
+  settingsSheet.focus(); // start at the sheet, not with a focus ring on the ×
   settingsSheet.querySelector('.sheet-scroll').scrollTop = 0;
 });
 

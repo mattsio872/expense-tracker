@@ -1083,21 +1083,51 @@ button.cone:active {
 /* =========================================================
    13. The add / edit sheet
    ========================================================= */
-/* A <dialog> pinned to the bottom of the screen: full width on a phone (max 480px),
-   never taller than the screen minus 110px, so a strip of the page stays visible above it */
+/* The <dialog> itself is an invisible layer over the WHOLE screen, anchored at the top and
+   exactly as tall as the visible screen (100dvh). The visible sheet (.sheet-panel) sits at its
+   bottom. Why not just "bottom: 0" on the dialog? iPhone Safari ignored that and put the
+   dialog where it sits in the page (after the footer), mostly off the screen.
+   Taps on the empty, see-through part land on the dialog itself, which app.js treats as
+   "tap outside = close". */
 .sheet {
   position: fixed;
-  inset: auto 0 0 0;
+  top: 0;
+  left: 0;
+  right: auto;
+  bottom: auto;
   width: 100%;
-  max-width: 480px;
-  max-height: calc(100dvh - 110px);
-  margin: 0 auto;
+  max-width: none;
+  height: 100vh;   /* older browsers without dvh */
+  height: 100dvh;  /* the visible screen height */
+  max-height: none;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end; /* the panel at the bottom */
   color: var(--ink);
-  background: var(--surface);
+  background: transparent;
   border: 0;
+  overflow: hidden;
+}
+
+/* The dialog gets focus when it opens (autofocus), so screen readers start at its title.
+   It's an invisible layer, so no focus ring on it. */
+.sheet:focus,
+.sheet:focus-visible {
+  outline: none;
+}
+
+/* The visible sheet: full width on a phone (max 480px), never taller than the screen minus
+   110px, so a strip of the page stays visible above it */
+.sheet-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100% - 110px);
+  margin: 0 auto;
+  background: var(--surface);
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   box-shadow: 0 -1px 0 var(--line);
 }

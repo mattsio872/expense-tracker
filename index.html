@@ -26,11 +26,11 @@
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Expenses">
-  <!-- "?v=8" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+  <!-- "?v=9" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
        style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
        AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
        instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
   <header class="app-header">
@@ -116,151 +116,159 @@
 
   <!-- The add / edit sheet. A native <dialog>: showModal() keeps keyboard focus inside it,
        Esc closes it, and the page behind can't be tapped. app.js opens it in "new" or "edit" mode. -->
-  <dialog id="expense-sheet" class="sheet" aria-labelledby="sheet-title">
-    <div class="sheet-top">
-      <div class="sheet-handle" aria-hidden="true"></div>
-      <div class="sheet-head">
-        <h2 id="sheet-title">New expense</h2>
-        <button type="button" id="sheet-close" class="icon-button" aria-label="Close">
-          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-            <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-          </svg>
-        </button>
+  <dialog id="expense-sheet" class="sheet" tabindex="-1" aria-labelledby="sheet-title">
+    <!-- The visible sheet. The <dialog> around it fills the screen (see style.css).
+         tabindex="-1" lets app.js put focus on the dialog itself when it opens. -->
+    <div class="sheet-panel">
+      <div class="sheet-top">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-head">
+          <h2 id="sheet-title">New expense</h2>
+          <button type="button" id="sheet-close" class="icon-button" aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
+
+      <!-- novalidate: app.js checks the fields itself and shows its own friendly messages -->
+      <form id="expense-form" class="sheet-form" novalidate>
+        <!-- Everything above the Save button scrolls if the keyboard leaves too little room -->
+        <div class="sheet-scroll">
+          <!-- The amount sits on a lit panel, like the total on the home screen.
+               type="text" + inputmode="decimal": the number keyboard with a dot, and no
+               surprises from type="number" (scroll-wheel changes, "e" allowed). -->
+          <div class="amount-field" id="amount-field">
+            <label for="amount">Amount</label>
+            <div class="amount-row">
+              <span class="amount-currency" aria-hidden="true">₱</span>
+              <input id="amount" name="amount" type="text" inputmode="decimal" autocomplete="off"
+                     enterkeyhint="done" placeholder="0" aria-describedby="amount-error">
+            </div>
+          </div>
+          <p id="amount-error" class="field-error" hidden>Enter an amount, like 185 or 49.50</p>
+
+          <!-- Category chips: real radio buttons (hidden) with chip-shaped labels.
+               The arrow keys move between them, and the form reads the choice like any radio.
+               app.js builds the chips from the CATEGORIES list. -->
+          <fieldset class="chip-group">
+            <legend>Category</legend>
+            <div class="chips" id="category-chips"></div>
+          </fieldset>
+
+          <fieldset class="chip-group">
+            <legend>When</legend>
+            <div class="chips">
+              <input type="radio" name="when" id="when-today" value="today" class="visually-hidden" checked>
+              <label for="when-today" class="chip">Today</label>
+              <input type="radio" name="when" id="when-yesterday" value="yesterday" class="visually-hidden">
+              <label for="when-yesterday" class="chip">Yesterday</label>
+              <input type="radio" name="when" id="when-pick" value="pick" class="visually-hidden">
+              <label for="when-pick" class="chip">
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <rect x="2" y="3" width="12" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                  <path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+                Pick a date
+              </label>
+            </div>
+            <!-- The real date. Today/Yesterday fill it in; "Pick a date" shows it so you can choose. -->
+            <label for="date" class="visually-hidden">Date</label>
+            <input id="date" name="date" type="date" class="date-input" hidden>
+          </fieldset>
+
+          <div class="field">
+            <label for="note">Note <span class="optional">(optional)</span></label>
+            <!-- maxlength stops typing at 200 characters; the counter appears near the limit.
+                 aria-describedby makes screen readers read the counter along with the field. -->
+            <input id="note" name="note" type="text" maxlength="200" enterkeyhint="done"
+                   placeholder="Lunch with classmates" aria-describedby="note-count">
+            <small id="note-count" class="hint" hidden>0 / 200</small>
+          </div>
+        </div>
+
+        <div class="sheet-actions">
+          <button type="submit" id="submit-btn" class="glow-button">Save expense</button>
+
+          <!-- Edit mode only. Deleting asks first, right here (no confirm() popup: some
+               in-app browsers block those). -->
+          <div id="delete-area" class="delete-area" hidden>
+            <button type="button" id="delete-btn" class="text-button danger">Delete expense</button>
+            <div id="delete-confirm" class="delete-confirm" hidden>
+              <span class="confirm-text">Delete this expense?</span>
+              <button type="button" id="delete-yes" class="btn btn-danger-solid">Yes, delete</button>
+              <button type="button" id="delete-no" class="btn">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </form>
     </div>
-
-    <!-- novalidate: app.js checks the fields itself and shows its own friendly messages -->
-    <form id="expense-form" class="sheet-form" novalidate>
-      <!-- Everything above the Save button scrolls if the keyboard leaves too little room -->
-      <div class="sheet-scroll">
-        <!-- The amount sits on a lit panel, like the total on the home screen.
-             type="text" + inputmode="decimal": the number keyboard with a dot, and no
-             surprises from type="number" (scroll-wheel changes, "e" allowed). -->
-        <div class="amount-field" id="amount-field">
-          <label for="amount">Amount</label>
-          <div class="amount-row">
-            <span class="amount-currency" aria-hidden="true">₱</span>
-            <input id="amount" name="amount" type="text" inputmode="decimal" autocomplete="off"
-                   enterkeyhint="done" placeholder="0" aria-describedby="amount-error">
-          </div>
-        </div>
-        <p id="amount-error" class="field-error" hidden>Enter an amount, like 185 or 49.50</p>
-
-        <!-- Category chips: real radio buttons (hidden) with chip-shaped labels.
-             The arrow keys move between them, and the form reads the choice like any radio.
-             app.js builds the chips from the CATEGORIES list. -->
-        <fieldset class="chip-group">
-          <legend>Category</legend>
-          <div class="chips" id="category-chips"></div>
-        </fieldset>
-
-        <fieldset class="chip-group">
-          <legend>When</legend>
-          <div class="chips">
-            <input type="radio" name="when" id="when-today" value="today" class="visually-hidden" checked>
-            <label for="when-today" class="chip">Today</label>
-            <input type="radio" name="when" id="when-yesterday" value="yesterday" class="visually-hidden">
-            <label for="when-yesterday" class="chip">Yesterday</label>
-            <input type="radio" name="when" id="when-pick" value="pick" class="visually-hidden">
-            <label for="when-pick" class="chip">
-              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <rect x="2" y="3" width="12" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
-                <path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-              </svg>
-              Pick a date
-            </label>
-          </div>
-          <!-- The real date. Today/Yesterday fill it in; "Pick a date" shows it so you can choose. -->
-          <label for="date" class="visually-hidden">Date</label>
-          <input id="date" name="date" type="date" class="date-input" hidden>
-        </fieldset>
-
-        <div class="field">
-          <label for="note">Note <span class="optional">(optional)</span></label>
-          <!-- maxlength stops typing at 200 characters; the counter appears near the limit.
-               aria-describedby makes screen readers read the counter along with the field. -->
-          <input id="note" name="note" type="text" maxlength="200" enterkeyhint="done"
-                 placeholder="Lunch with classmates" aria-describedby="note-count">
-          <small id="note-count" class="hint" hidden>0 / 200</small>
-        </div>
-      </div>
-
-      <div class="sheet-actions">
-        <button type="submit" id="submit-btn" class="glow-button">Save expense</button>
-
-        <!-- Edit mode only. Deleting asks first, right here (no confirm() popup: some
-             in-app browsers block those). -->
-        <div id="delete-area" class="delete-area" hidden>
-          <button type="button" id="delete-btn" class="text-button danger">Delete expense</button>
-          <div id="delete-confirm" class="delete-confirm" hidden>
-            <span class="confirm-text">Delete this expense?</span>
-            <button type="button" id="delete-yes" class="btn btn-danger-solid">Yes, delete</button>
-            <button type="button" id="delete-no" class="btn">Cancel</button>
-          </div>
-        </div>
-      </div>
-    </form>
   </dialog>
 
   <!-- Backup & settings: the monthly budget, and saving / loading a CSV backup.
        Same kind of sheet as the add / edit one. -->
-  <dialog id="settings-sheet" class="sheet" aria-labelledby="settings-title">
-    <div class="sheet-top">
-      <div class="sheet-handle" aria-hidden="true"></div>
-      <div class="sheet-head">
-        <h2 id="settings-title">Backup &amp; settings</h2>
-        <button type="button" id="settings-close" class="icon-button" aria-label="Close">
-          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-            <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-          </svg>
-        </button>
+  <dialog id="settings-sheet" class="sheet" tabindex="-1" aria-labelledby="settings-title">
+    <!-- The visible sheet. The <dialog> around it fills the screen (see style.css).
+         tabindex="-1" lets app.js put focus on the dialog itself when it opens. -->
+    <div class="sheet-panel">
+      <div class="sheet-top">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-head">
+          <h2 id="settings-title">Backup &amp; settings</h2>
+          <button type="button" id="settings-close" class="icon-button" aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
-    </div>
 
-    <div class="sheet-scroll">
-      <!-- Monthly budget. Saved as you type (localStorage key "budget"); empty = no budget. -->
-      <section class="settings-section" aria-labelledby="budget-label">
-        <label for="budget" id="budget-label" class="settings-label">Monthly budget <span class="optional">(optional)</span></label>
-        <div class="money-input" id="budget-field">
-          <span class="money-prefix" aria-hidden="true">₱</span>
-          <input id="budget" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done"
-                 placeholder="10,000" aria-describedby="budget-hint budget-error">
-        </div>
-        <p id="budget-hint" class="settings-hint">Shows how much you have left each month.</p>
-        <p id="budget-error" class="field-error" hidden>Enter an amount, like 10000, or leave it empty</p>
-      </section>
-
-      <!-- Backup: save all expenses to a CSV file, or load them back from one -->
-      <section class="settings-section" aria-labelledby="backup-title">
-        <h3 id="backup-title" class="settings-heading">Backup</h3>
-        <p class="settings-note">Save all your expenses as a CSV file (opens in Excel or Google Sheets), or load them back from one.</p>
-        <!-- Which month to export. app.js fills in the months that have expenses. -->
-        <div class="field export-month">
-          <label for="export-month">Month to export</label>
-          <select id="export-month">
-            <option value="all">All months</option>
-          </select>
-        </div>
-        <div class="backup-actions">
-          <button type="button" id="export-btn" class="btn">Export CSV</button>
-          <button type="button" id="import-btn" class="btn">Import CSV</button>
-          <!-- The real file picker is hidden; the Import button opens it. accept= limits it to CSV files -->
-          <input type="file" id="import-file" accept=".csv,text/csv" hidden>
-        </div>
-
-        <!-- After picking a file: what was found, any problems, and what to do with it -->
-        <div id="import-preview" class="import-preview" hidden>
-          <p id="import-summary" class="import-summary"></p>
-          <ul id="import-problems" class="import-problems"></ul>
-          <div class="backup-actions">
-            <button type="button" id="import-merge" class="btn btn-gold">Add new expenses</button>
-            <button type="button" id="import-replace" class="btn btn-danger">Replace all</button>
-            <button type="button" id="import-cancel" class="btn">Cancel</button>
+      <div class="sheet-scroll">
+        <!-- Monthly budget. Saved as you type (localStorage key "budget"); empty = no budget. -->
+        <section class="settings-section" aria-labelledby="budget-label">
+          <label for="budget" id="budget-label" class="settings-label">Monthly budget <span class="optional">(optional)</span></label>
+          <div class="money-input" id="budget-field">
+            <span class="money-prefix" aria-hidden="true">₱</span>
+            <input id="budget" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done"
+                   placeholder="10,000" aria-describedby="budget-hint budget-error">
           </div>
-        </div>
-        <!-- e.g. "Exported 4 expenses to expenses-2026-11-21.csv" -->
-        <p id="backup-status" class="summary backup-status" aria-live="polite"></p>
-      </section>
+          <p id="budget-hint" class="settings-hint">Shows how much you have left each month.</p>
+          <p id="budget-error" class="field-error" hidden>Enter an amount, like 10000, or leave it empty</p>
+        </section>
+
+        <!-- Backup: save all expenses to a CSV file, or load them back from one -->
+        <section class="settings-section" aria-labelledby="backup-title">
+          <h3 id="backup-title" class="settings-heading">Backup</h3>
+          <p class="settings-note">Save all your expenses as a CSV file (opens in Excel or Google Sheets), or load them back from one.</p>
+          <!-- Which month to export. app.js fills in the months that have expenses. -->
+          <div class="field export-month">
+            <label for="export-month">Month to export</label>
+            <select id="export-month">
+              <option value="all">All months</option>
+            </select>
+          </div>
+          <div class="backup-actions">
+            <button type="button" id="export-btn" class="btn">Export CSV</button>
+            <button type="button" id="import-btn" class="btn">Import CSV</button>
+            <!-- The real file picker is hidden; the Import button opens it. accept= limits it to CSV files -->
+            <input type="file" id="import-file" accept=".csv,text/csv" hidden>
+          </div>
+
+          <!-- After picking a file: what was found, any problems, and what to do with it -->
+          <div id="import-preview" class="import-preview" hidden>
+            <p id="import-summary" class="import-summary"></p>
+            <ul id="import-problems" class="import-problems"></ul>
+            <div class="backup-actions">
+              <button type="button" id="import-merge" class="btn btn-gold">Add new expenses</button>
+              <button type="button" id="import-replace" class="btn btn-danger">Replace all</button>
+              <button type="button" id="import-cancel" class="btn">Cancel</button>
+            </div>
+          </div>
+          <!-- e.g. "Exported 4 expenses to expenses-2026-11-21.csv" -->
+          <p id="backup-status" class="summary backup-status" aria-live="polite"></p>
+        </section>
+      </div>
     </div>
   </dialog>
 
@@ -271,6 +279,6 @@
   </div>
 
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=8" defer></script>
+  <script src="app.js?v=9" defer></script>
 </body>
 </html>
