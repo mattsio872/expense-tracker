@@ -429,6 +429,12 @@ input::placeholder {
   outline: none; /* the whole panel shows the focus instead (below) */
 }
 
+/* Smaller steps for long amounts (app.js picks one if 56px doesn't fit) */
+.amount-field.is-medium input { font-size: 44px; letter-spacing: -1.5px; }
+.amount-field.is-small input  { font-size: 34px; letter-spacing: -1px; }
+.amount-field.is-medium .amount-currency,
+.amount-field.is-small .amount-currency { font-size: 32px; }
+
 .amount-field input::placeholder {
   color: var(--lightbox-track);
 }
@@ -783,8 +789,28 @@ button.cone:active {
      • Jollibee lunch with classmates     ₱185.00
        Food
    A grid with 3 columns: the dot, the text (takes the rest), the amount. */
+/* Each row clips its button, so a row swiped to the left slides out of view */
+.expense {
+  position: relative;
+  overflow: hidden;
+}
+
 .expense + .expense {
   border-top: 1px solid var(--line-soft);
+}
+
+/* Behind the row: red with "Delete" on the right, uncovered as you swipe the row left */
+.swipe-delete {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: var(--space-5);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--lightbox-ink);
+  background: var(--danger);
 }
 
 .expense-button {
@@ -798,11 +824,13 @@ button.cone:active {
   font: inherit;
   color: inherit;
   text-align: left;
-  background: none;
+  position: relative; /* above the red "Delete" layer */
+  background: var(--ground); /* solid, so the red layer only shows when the row moves */
   border: 0;
   border-radius: 0;
   cursor: pointer;
-  touch-action: manipulation;
+  /* pan-y: the browser keeps up-and-down scrolling; sideways swipes go to app.js */
+  touch-action: pan-y;
   -webkit-user-select: none;
   user-select: none;
 }

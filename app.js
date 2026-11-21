@@ -431,11 +431,35 @@ function makeExpenseRow(expense) {
   button.setAttribute('aria-label', `${parts.join(', ')}. Edit`);
 
   button.append(dot, info, amount);
-  item.append(button);
+
+  // Behind the row: the red "Delete" that shows as you swipe the row to the left
+  const swipeDelete = makeElement('span', 'swipe-delete', 'Delete');
+  swipeDelete.setAttribute('aria-hidden', 'true'); // screen readers delete from the edit sheet
+  item.append(swipeDelete, button);
   return item;
 }
 
 // ===== 5a. The lightbox: the chosen month's total =====
+
+// The month the lightbox showed last time (null = not drawn yet), to spot a month switch
+let lightboxMonth = null;
+// The count-up in progress (an id from requestAnimationFrame), so a new one can stop it
+let countUpFrame = 0;
+
+// The total rolls up from ₱0 to `target` in half a second, fast at first and easing into place.
+// requestAnimationFrame runs the step once per screen refresh.
+function countUp(target) {
+  const start = performance.now();
+  const step = (now) => {
+    const progress = Math.min((now - start) / 500, 1);
+    const eased = 1 - (1 - progress) ** 3; // ease-out: quick start, gentle landing
+    totalEl.textContent = formatWholePeso(Math.round(target * eased));
+    if (progress < 1) countUpFrame = requestAnimationFrame(step);
+  };
+  totalEl.textContent = formatWholePeso(0);
+  countUpFrame = requestAnimationFrame(step);
+}
+
 // Under the total: with a budget, a bar and what's left of it;
 // without one, how the month compares with the month before (if that month has expenses).
 function renderLightbox() {
@@ -446,8 +470,17 @@ function renderLightbox() {
   totalLabel.textContent = month === currentMonth() ? 'Spent this month' : `Spent in ${monthName(month)}`;
 
   const spent = sumOf(month);
-  totalEl.textContent = formatWholePeso(spent);
+  // The final number first, so fitTotal() picks the font size for it (the count-up then
+  // never changes the size mid-way)
+  cancelAnimationFrame(countUpFrame);
+  // Whole pesos, except a total under ₱1 (it would show "₱0" although something was spent)
+  totalEl.textContent = spent > 0 && spent < 1 ? formatPeso(spent) : formatWholePeso(spent);
   fitTotal();
+  // Switched to another month: the total counts up to its new value. Not when the app
+  // opens (you want the number straight away) and not with Reduce Motion on.
+  const switched = lightboxMonth !== null && lightboxMonth !== month;
+  lightboxMonth = month;
+  if (switched && spent >= 1 && !prefersReducedMotion()) countUp(spent);
 
   budgetBox.hidden = budget === null;
   if (budget !== null) {
@@ -562,6 +595,9 @@ function renderSpeakerPanel(monthExpenses) {
   slots.forEach((slot, i) => {
     const percent = percents[i];
     const name = slot.category ?? 'Rest';
+    // A real but tiny share would round to "0%", which looks like nothing was spent
+    const percentText = percent === 0 ? '<1%' : `${percent}%`;
+    const percentSpoken = percent === 0 ? 'less than 1 percent' : `${percent} percent`;
 
     const cone = document.createElement(slot.category ? 'button' : 'div');
     cone.className = 'cone';
@@ -571,18 +607,18 @@ function renderSpeakerPanel(monthExpenses) {
       cone.dataset.category = slot.category;
       cone.setAttribute('aria-pressed', String(picked));
       cone.setAttribute('aria-label', picked
-        ? `${name}, ${percent} percent. Showing only ${name}`
-        : `${name}, ${percent} percent. Show only ${name}`);
+        ? `${name}, ${percentSpoken}. Showing only ${name}`
+        : `${name}, ${percentSpoken}. Show only ${name}`);
     } else {
       cone.setAttribute('role', 'img');
-      cone.setAttribute('aria-label', `Rest, ${percent} percent`);
+      cone.setAttribute('aria-label', `Rest, ${percentSpoken}`);
     }
 
     // The gold ring is a conic-gradient: gold from 0 to the percent, dark track after it.
     // The --p variable carries the percent into the CSS.
     const ring = makeElement('span', 'cone-ring', '');
     ring.style.setProperty('--p', `${percent}%`);
-    const cap = makeElement('span', 'cone-cap', `${percent}%`);
+    const cap = makeElement('span', 'cone-cap', percentText);
     ring.append(cap);
     ring.setAttribute('aria-hidden', 'true');
 
@@ -1024,6 +1060,7 @@ function openSheet(id) {
   updateNoteCount();
 
   showSheet(sheet);
+  fitAmount(); // measured now that the sheet is on screen (a long amount when editing)
   sheet.querySelector('.sheet-scroll').scrollTop = 0;
   // A new expense starts with the number keyboard up. (Editing doesn't: you may only
   // want to change the category, and the keyboard would cover the sheet.)
@@ -1256,6 +1293,134 @@ function setupSheet(dialog) {
   panel.addEventListener('touchcancel', release);
 }
 
+// ===== 6e. Swipe a row to the left to delete it =====
+// The row follows your finger sideways, uncovering a red "Delete" behind it. Let go past 40%
+// of the row (or flick it left) and it slides away and is deleted, with the same Undo toast
+// as deleting from the sheet. Otherwise it slides back. Up-and-down still scrolls the page:
+// the swipe only starts when the finger clearly moves sideways, to the left.
+
+// Where a row is right now, in px left (-) or right (+) of its place (works mid-animation)
+function currentRowX(button) {
+  const transform = getComputedStyle(button).transform;
+  return transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m41;
+}
+
+// Stops a row's slide in progress and holds it where it is. Returns that x.
+function holdRow(button) {
+  const x = currentRowX(button);
+  button.getAnimations().forEach((animation) => animation.cancel());
+  button.style.transform = `translateX(${x}px)`;
+  return x;
+}
+
+// Slides a row from where it is to x, then calls onDone (unless a finger catches it first)
+function slideRow(button, x, duration, onDone) {
+  const fromX = holdRow(button);
+  button.style.transform = `translateX(${x}px)`;
+  if (prefersReducedMotion()) {
+    onDone?.();
+    return;
+  }
+  const slide = button.animate(
+    [{ transform: `translateX(${fromX}px)` }, { transform: `translateX(${x}px)` }],
+    { duration, easing: SHEET_EASE }
+  );
+  if (onDone) slide.onfinish = onDone;
+}
+
+function setupSwipeToDelete() {
+  let swipe = null;         // the touch in progress, or null
+  let ignoreClicksUntil = 0; // a swipe must not also count as a tap (which opens the editor)
+
+  list.addEventListener('touchstart', function (event) {
+    const button = event.target.closest('.expense-button');
+    if (!button || event.touches.length !== 1) {
+      if (swipe && swipe.mode !== 'dragging') swipe = null; // a second finger: ignore it
+      return;
+    }
+    const touch = event.touches[0];
+    swipe = {
+      button,
+      mode: 'deciding', // 'deciding' -> 'dragging' or 'ignored'
+      startX: touch.clientX,
+      startY: touch.clientY,
+      fromX: 0,
+      samples: [{ x: touch.clientX, time: event.timeStamp }],
+    };
+    // A row caught while sliding back: hold it under the finger
+    if (button.getAnimations().length) {
+      swipe.mode = 'dragging';
+      swipe.fromX = holdRow(button);
+    }
+  }, { passive: true });
+
+  list.addEventListener('touchmove', function (event) {
+    if (!swipe || swipe.mode === 'ignored') return;
+    const touch = event.touches[0];
+    const dx = touch.clientX - swipe.startX;
+    const dy = touch.clientY - swipe.startY;
+
+    if (swipe.mode === 'deciding') {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return; // too small to tell yet
+      // Mostly up/down = scrolling, and to the right = nothing to do: leave it to the browser
+      if (Math.abs(dx) <= Math.abs(dy) || dx > 0) {
+        swipe.mode = 'ignored';
+        return;
+      }
+      swipe.mode = 'dragging';
+      swipe.startX = touch.clientX; // follow the finger from here, 1:1
+    }
+
+    event.preventDefault(); // the page mustn't scroll while a row is being swiped
+    let x = swipe.fromX + (touch.clientX - swipe.startX);
+    if (x > 0) x = rubberBand(x); // past its place to the right: resist
+    swipe.button.style.transform = `translateX(${x}px)`;
+
+    swipe.samples.push({ x: touch.clientX, time: event.timeStamp });
+    while (swipe.samples.length > 2 && event.timeStamp - swipe.samples[0].time > 100) swipe.samples.shift();
+  }, { passive: false });
+
+  function release() {
+    if (!swipe || swipe.mode !== 'dragging') {
+      swipe = null;
+      return;
+    }
+    const { button, samples } = swipe;
+    swipe = null;
+    ignoreClicksUntil = performance.now() + 400;
+
+    const first = samples[0];
+    const last = samples[samples.length - 1];
+    const velocity = (last.x - first.x) / Math.max(last.time - first.time, 1); // px per ms, - = left
+    const x = currentRowX(button);
+    const width = button.offsetWidth;
+
+    if (-x > width * 0.4 || (velocity < -0.4 && x < -20)) {
+      // Delete: slide the rest of the way out at the finger's speed, then remove it
+      const duration = Math.min(Math.max((width + x) / Math.max(-velocity, 0.8), 120), 240);
+      const id = button.dataset.id;
+      slideRow(button, -width, duration, function () {
+        deleteExpense(id);
+        showToast('Expense deleted', { undo: true });
+      });
+    } else {
+      slideRow(button, 0, 200); // not far enough: back into place
+    }
+  }
+
+  list.addEventListener('touchend', release);
+  list.addEventListener('touchcancel', release);
+
+  // Right after a swipe the browser may still send a "click": don't open the editor for it.
+  // (capture: true = this runs before the list's own click listener)
+  list.addEventListener('click', function (event) {
+    if (performance.now() < ignoreClicksUntil) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+  }, true);
+}
+
 // ===== 7. Events: react to what the user does =====
 form.addEventListener('submit', function (event) {
   // By default a form reloads the page when submitted. We stop that.
@@ -1302,7 +1467,18 @@ form.addEventListener('submit', function (event) {
 // Typing in the amount clears the error as soon as it's fixed
 amountInput.addEventListener('input', function () {
   if (!amountError.hidden && parseAmount(amountInput.value) !== null) showAmountError(false);
+  fitAmount();
 });
+
+// A long amount (1250000.50) must stay readable in the field: step the font down
+// 56 -> 44 -> 34px when the number is wider than the field. Same idea as fitTotal().
+function fitAmount() {
+  for (const size of ['', 'is-medium', 'is-small']) {
+    amountField.classList.remove('is-medium', 'is-small');
+    if (size) amountField.classList.add(size);
+    if (amountInput.scrollWidth <= amountInput.clientWidth) return;
+  }
+}
 
 // The When chips: Today / Yesterday fill in the date; Pick a date shows the date field
 form.addEventListener('change', function (event) {
@@ -1505,6 +1681,7 @@ if ('serviceWorker' in navigator) {
 buildCategoryChips();
 setupSheet(sheet);
 setupSheet(settingsSheet);
+setupSwipeToDelete();
 renderList();
 
 // Outfit is a bit wider than the phone's own font, so measure the big total again once it has
