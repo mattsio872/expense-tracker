@@ -26,11 +26,11 @@
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Expenses">
-  <!-- "?v=5" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+  <!-- "?v=6" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
        style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
        AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
        instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <header class="app-header">
@@ -40,20 +40,52 @@
       <img class="app-icon" src="images/monkey-icon.png" alt="" width="44" height="44">
       Matt's Expenses
     </h1>
+
+    <!-- The Live badge: which month the whole screen shows. The real control is the <select>
+         stretched invisibly over the badge, so tapping it opens the phone's own month picker.
+         app.js fills in the months and the visible label ("Live: Nov" or "Oct 2026"). -->
+    <div class="live-badge" id="live-badge">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span class="live-label" id="live-label" aria-hidden="true">Live</span>
+      <select id="filter-month" aria-label="Month"></select>
+    </div>
   </header>
 
   <!-- One column, centred, on every screen size -->
   <main class="layout">
-    <!-- The lightbox: the one glowing thing on the page, this month's total.
-         app.js fills in the total and the comparison with last month. -->
+    <!-- The lightbox: the one glowing thing on the page, the chosen month's total.
+         app.js fills in the total and the comparison with the month before. -->
     <section class="lightbox" aria-labelledby="total-label">
       <p class="lightbox-label" id="total-label">Spent this month</p>
       <p class="lightbox-total"><strong id="total">₱0</strong></p>
       <p class="lightbox-compare" id="total-compare" hidden></p>
     </section>
 
-    <!-- 1. The form for adding (and editing) an expense -->
-    <section class="card" aria-labelledby="form-title">
+    <!-- The walnut speaker panel: the month's biggest categories as round "speaker cones".
+         Tapping a cone shows only that category in the list. app.js builds the cones. -->
+    <section class="speaker-panel" id="speaker-panel" aria-label="Spending by category" hidden>
+      <div class="cones" id="cones"></div>
+    </section>
+
+    <!-- The expenses of the chosen month, grouped by day -->
+    <section class="expenses" aria-labelledby="list-title">
+      <h2 id="list-title" class="visually-hidden">Expenses</h2>
+
+      <!-- "Showing Bills · Clear", only while a category is picked.
+           aria-live="polite" makes screen readers announce it when it changes. -->
+      <p id="filter-summary" class="filter-line" aria-live="polite">
+        <span id="filter-text"></span>
+        <button type="button" id="filter-clear" class="link-button" hidden>Clear</button>
+      </p>
+
+      <p id="empty-message" class="empty" hidden></p>
+      <!-- One <li> per day: a day header, then that day's expenses -->
+      <ul id="expense-list" class="expense-list"></ul>
+    </section>
+
+    <!-- 1. The form for adding (and editing) an expense. The floating Add expense button
+         brings you here (in the next step it moves into a sheet that slides up). -->
+    <section class="card" id="form-card" aria-labelledby="form-title">
       <h2 id="form-title">Add expense</h2>
 
       <form id="expense-form">
@@ -103,59 +135,6 @@
       </form>
     </section>
 
-    <!-- 2. The list of saved expenses -->
-    <section class="card" aria-labelledby="list-title">
-      <!-- Heading on the left, total of the expenses currently shown on the right -->
-      <div class="list-header">
-        <h2 id="list-title">Expenses</h2>
-        <p class="list-total" id="list-total-box">
-          <!-- "visually-hidden" text is read by screen readers but not shown on screen -->
-          <span class="visually-hidden">Total of expenses shown: </span>
-          <strong id="list-total">₱0.00</strong>
-        </p>
-      </div>
-
-      <!-- Filters: app.js fills in the months (from your expenses) and the categories (copied from the form) -->
-      <div class="filters" id="filters">
-        <div class="field">
-          <label for="filter-month">Month</label>
-          <select id="filter-month">
-            <option value="all">All months</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="filter-category">Category</label>
-          <select id="filter-category">
-            <option value="all">All categories</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- e.g. "Showing 2 of 3 expenses".
-           aria-live="polite" makes screen readers announce it when the filters change. -->
-      <p id="filter-summary" class="summary" aria-live="polite"></p>
-
-      <p id="empty-message" class="empty">No expenses yet. Add your first one using the form.</p>
-      <ul id="expense-list" class="expense-list"></ul>
-    </section>
-
-    <!-- 3. Spending chart: plain HTML bars that app.js draws (no chart library) -->
-    <section class="card chart-card" aria-labelledby="chart-title">
-      <h2 id="chart-title">Spending chart</h2>
-      <p class="chart-note">All your expenses. Not affected by the filters above.</p>
-      <p id="chart-empty" class="empty">Add expenses to see your spending chart.</p>
-
-      <div id="chart-content">
-        <h3 class="chart-subtitle">By month</h3>
-        <div id="month-chart" class="bar-chart"></div>
-        <!-- Which color is which category -->
-        <ul id="chart-legend" class="legend"></ul>
-
-        <h3 class="chart-subtitle">By category</h3>
-        <div id="category-chart" class="bar-chart"></div>
-      </div>
-    </section>
-
     <!-- 4. Backup: save all expenses to a CSV file (and, in the next step, load them back) -->
     <section class="card backup-card" aria-labelledby="backup-title">
       <h2 id="backup-title">Backup</h2>
@@ -197,7 +176,17 @@
     <p id="offline-status" class="offline-status" aria-live="polite"></p>
   </footer>
 
+  <!-- The big glowing Add expense button, always in thumb reach at the bottom.
+       The fade behind it lets the list slide under it instead of being cut off. -->
+  <div class="add-fade" aria-hidden="true"></div>
+  <button type="button" id="add-btn" class="glow-button add-button">
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M10 3v14M3 10h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+    Add expense
+  </button>
+
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=5" defer></script>
+  <script src="app.js?v=6" defer></script>
 </body>
 </html>

@@ -71,6 +71,7 @@
   /* Light */
   --glow-lightbox: 0 0 0 1px #fff8ea, 0 0 46px rgba(255,236,200,.28), 0 18px 40px rgba(0,0,0,.45);
   --glow-button: 0 0 30px rgba(255,236,200,.3);
+  --walnut-edge: inset 0 1px 0 rgba(255,220,180,.18);
 
   /* Motion: a strong ease-out, so presses answer immediately */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -132,8 +133,7 @@ h2 {
 /* Every number lines up: all digits the same width */
 #total,
 .expense-amount,
-.list-total,
-.chart-amount,
+.day-total,
 .hint,
 .summary {
   font-variant-numeric: tabular-nums;
@@ -143,6 +143,10 @@ h2 {
    3. Header: logo + name
    ========================================================= */
 .app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   max-width: 480px;
   margin: 0 auto;
   /* At least 16px at the top, more on phones with a notch (env() is 0 elsewhere) */
@@ -169,6 +173,66 @@ h2 {
   background: #2b201b;
   box-shadow: 0 0 0 1.5px var(--gold);
   object-fit: cover;
+}
+
+/* The Live badge, top right: which month the screen shows.
+   A small lit sign: glowing red dot + warm text. An earlier month is unlit. */
+.live-badge {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--signal);
+  box-shadow: 0 0 8px var(--signal);
+}
+
+.live-label {
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 700;
+  line-height: 18px;
+  color: var(--live-ink);
+  text-shadow: 0 0 8px rgba(255, 214, 150, .8);
+  white-space: nowrap;
+}
+
+.live-badge.is-past .live-dot {
+  background: var(--ink-faint);
+  box-shadow: none;
+}
+
+.live-badge.is-past .live-label {
+  color: var(--ink-muted);
+  text-shadow: none;
+}
+
+/* The real month picker: invisible, stretched over the badge (and a bit past it, so the tap
+   area is at least 44px tall). Tapping the badge = tapping the select = the phone's picker. */
+.live-badge select {
+  position: absolute;
+  inset: -8px -4px;
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  opacity: 0;
+  font-size: 16px; /* no zoom on iPhone */
+  cursor: pointer;
+}
+
+/* The select is invisible, so show its keyboard focus ring on the badge instead */
+.live-badge:has(select:focus-visible) {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
 }
 
 /* =========================================================
@@ -238,6 +302,11 @@ h2 {
 /* =========================================================
    6. Form
    ========================================================= */
+/* When the Add expense button scrolls to the form, leave some air (and the notch) above it */
+#form-card {
+  scroll-margin-top: calc(16px + env(safe-area-inset-top, 0px));
+}
+
 #expense-form {
   display: grid;
   gap: 14px;
@@ -410,27 +479,95 @@ select {
 }
 
 /* =========================================================
-   8. Expense list
+   8. Speaker panel: the month's biggest categories as cones
    ========================================================= */
-/* "Expenses ........ ₱12,200.00": heading on the left, total pushed to the right */
-.list-header {
+/* A walnut speaker cabinet: warm wood gradient with a light top edge */
+.speaker-panel {
+  background: linear-gradient(135deg, var(--walnut-light), var(--walnut) 55%, #6e4a31);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--walnut-edge);
+  padding: 16px 14px 14px;
+}
+
+/* Four equal columns. minmax(0, 1fr) lets a long label shrink (with "…") instead of widening the panel */
+.cones {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+/* One cone + its label. It's a <button> (tap to filter), so reset the button look first */
+.cone {
   display: flex;
-  align-items: baseline;          /* line up the bottoms of the two texts */
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 4px 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-md); /* so the keyboard focus ring is rounded */
 }
 
-.list-header h2 {
-  margin-bottom: 0; /* the wrapper above handles the spacing now */
+button.cone {
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 100ms var(--ease-out);
 }
 
-.list-total {
-  margin: 0;
-  font-size: 1.0625rem;
+button.cone:active {
+  transform: scale(0.97);
+}
+
+/* The gold ring: gold from 0 up to the percent (--p, set by app.js), dark track after it */
+.cone-ring {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: conic-gradient(var(--gold) 0 var(--p, 0%), var(--cone-track) var(--p, 0%) 100%);
+}
+
+/* The speaker cone itself, with the percent printed on its dust cap */
+.cone-cap {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, var(--cone-cap) 0 18%, var(--cone) 19% 60%, #1f1a18 61%);
+  color: var(--lightbox);
+  font-size: 0.8125rem; /* 13px */
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
+/* The picked cone (the list shows only this category) gets a gold ring around it */
+.cone[aria-pressed="true"] .cone-ring {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+.cone-label {
+  max-width: 100%;
+  font-size: 0.75rem; /* 12px */
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--walnut-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =========================================================
+   9. Expense list, grouped by day
+   ========================================================= */
 /* Hidden on screen, but still read aloud by screen readers */
 .visually-hidden {
   position: absolute;
@@ -441,35 +578,86 @@ select {
   white-space: nowrap;
 }
 
-/* Two filter dropdowns side by side. "minmax(0, 1fr)" = two equal columns that are
-   allowed to shrink, so long month names can't push the page wider than the phone. */
-.filters {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-3);
+/* "Showing Bills · Clear": only takes up space while a category is picked */
+.filter-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--ink-muted);
+}
+
+.filter-line:has(#filter-clear:not([hidden])) {
   margin-bottom: var(--space-2);
 }
 
-/* "Showing 2 of 3 expenses" */
+/* A button that looks like a link: gold, underlined, still finger-sized */
+.link-button {
+  min-height: var(--tap);
+  padding: 0 4px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Small grey lines like "Exported 4 expenses…" */
 .summary {
   margin: 0 0 var(--space-3);
   font-size: 0.875rem;
   color: var(--ink-muted);
 }
 
+/* "No expenses in November yet." */
 .empty {
   margin: 0;
+  padding: var(--space-6) 0;
+  text-align: center;
   color: var(--ink-muted);
 }
 
-.expense-list {
+.expense-list,
+.day-rows {
   list-style: none; /* remove the bullet points */
   margin: 0;
   padding: 0;
 }
 
+/* 22px of air above each day, except the first */
+.day + .day {
+  margin-top: 22px;
+}
+
+/* "Today ........................ ₱230.00" with a thin rule under it */
+.day-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.125rem; /* 18px */
+  line-height: 24px;
+  font-weight: 700;
+}
+
+.day-total {
+  font-size: 0.9375rem; /* 15px */
+  font-weight: 600;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
 /* One row:  • Jollibee lunch with classmates     ₱185.00
-               Food · Nov 21, 2026        [Edit] [Delete]
+               Food                        [Edit] [Delete]
    A grid with 3 columns: the dot, the text (takes the rest), the amount. */
 .expense {
   display: grid;
@@ -484,7 +672,6 @@ select {
 
 .expense:first-child {
   border-top: none;
-  padding-top: 0;
 }
 
 .expense-dot {
@@ -492,7 +679,7 @@ select {
   height: 10px;
   border-radius: 50%;
   align-self: start;
-  margin-top: 7px; /* lines it up with the middle of the title's first line */
+  margin-top: 6px; /* lines it up with the middle of the title's first line */
 }
 
 .expense-info {
@@ -538,98 +725,6 @@ select {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--danger);
-}
-
-/* =========================================================
-   9. Spending chart
-   ========================================================= */
-.chart-card h2 {
-  margin-bottom: 4px;
-}
-
-.chart-note,
-.card-note {
-  margin: 0 0 var(--space-4);
-  font-size: 0.875rem;
-  color: var(--ink-muted);
-}
-
-.chart-subtitle {
-  margin: var(--space-5) 0 var(--space-2);
-  font-size: 0.9375rem;
-  font-weight: 600;
-}
-
-#chart-content > .chart-subtitle:first-child {
-  margin-top: 0;
-}
-
-.bar-chart {
-  display: grid;
-  gap: var(--space-3);
-}
-
-/* "Nov 2026 ............ ₱11,350.00" above each bar */
-.chart-row-label {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-  font-size: 0.875rem;
-  margin-bottom: 4px;
-}
-
-.chart-amount {
-  font-weight: 600;
-}
-
-/* The lane: full width, dark. The bar inside it gets its width from app.js */
-.bar-track {
-  height: 12px;
-  background: var(--cone-track);
-  border-radius: var(--radius-pill);
-  overflow: hidden; /* clips the bar's corners into the rounded lane */
-}
-
-.bar {
-  display: flex;    /* lets the colored pieces sit side by side and share the width */
-  height: 100%;
-  min-width: 6px;   /* even a tiny amount stays visible */
-  border-radius: var(--radius-pill);
-  overflow: hidden;
-}
-
-.bar-piece {
-  flex-basis: 0;    /* start every piece at 0 width; flex-grow (set in app.js) shares out the rest */
-  min-width: 3px;   /* a very small category still shows as a sliver */
-}
-
-/* A thin gap between pieces so neighbouring colors don't blur together */
-.bar-piece + .bar-piece {
-  border-left: 2px solid var(--surface);
-}
-
-/* Legend: colored dots with category names, wrapping onto new lines as needed */
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  list-style: none;
-  margin: var(--space-3) 0 0;
-  padding: 0;
-  font-size: 0.8125rem;
-  color: var(--ink-muted);
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legend-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
 }
 
 /* =========================================================
@@ -706,7 +801,9 @@ select {
   max-width: 480px;
   margin: 0 auto;
   /* Room for the home bar on phones without a button */
-  padding: var(--space-4) var(--space-5) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+  /* 120px of room at the bottom, so the last things on the page can scroll above the
+     floating Add expense button (plus the home bar on phones without a button) */
+  padding: var(--space-4) var(--space-5) calc(120px + env(safe-area-inset-bottom, 0px));
 }
 
 .offline-status {
@@ -722,13 +819,86 @@ select {
 }
 
 /* =========================================================
-   12. Reduced motion: no press animation for people who turn motion off
+   12. Floating Add expense button
+   ========================================================= */
+/* The glowing light button, fixed at the bottom where the thumb rests */
+.glow-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 58px;
+  padding: 0 var(--space-6);
+  font: inherit;
+  font-size: 1.125rem; /* 18px */
+  font-weight: 700;
+  color: var(--lightbox-ink);
+  background: var(--lightbox);
+  border: 0;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--glow-button);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 100ms var(--ease-out);
+}
+
+.glow-button:active {
+  transform: scale(0.97);
+}
+
+/* left + right + max-width + margin: auto = full width on a phone, centred on a big screen */
+.add-button {
+  position: fixed;
+  left: 20px;
+  right: 20px;
+  bottom: calc(34px + env(safe-area-inset-bottom, 0px));
+  max-width: 440px;
+  margin: 0 auto;
+  z-index: 10;
+  transition: transform 100ms var(--ease-out), opacity 200ms var(--ease-out), visibility 200ms;
+}
+
+/* The list fades into the dark behind the button instead of being cut off by it */
+.add-fade {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(120px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to bottom, transparent, var(--ground) 70%);
+  pointer-events: none; /* taps go through to whatever is under the fade */
+  z-index: 9;
+  transition: opacity 200ms var(--ease-out);
+}
+
+/* While the form is on screen the button steps aside (app.js sets form-in-view) */
+.form-in-view .add-button {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+}
+
+.form-in-view .add-fade {
+  opacity: 0;
+}
+
+/* =========================================================
+   13. Reduced motion: no press animation for people who turn motion off
    ========================================================= */
 @media (prefers-reduced-motion: reduce) {
-  .btn {
+  .btn,
+  button.cone,
+  .glow-button,
+  .add-button,
+  .add-fade {
     transition: none;
   }
-  .btn:active:not(:disabled) {
+  .btn:active:not(:disabled),
+  button.cone:active,
+  .glow-button:active,
+  .form-in-view .add-button {
     transform: none;
   }
 }

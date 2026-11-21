@@ -11,18 +11,17 @@ const cancelBtn = document.getElementById('cancel-btn');
 const list = document.getElementById('expense-list');
 const totalEl = document.getElementById('total');
 const totalCompare = document.getElementById('total-compare');
+const totalLabel = document.getElementById('total-label');
 const emptyMessage = document.getElementById('empty-message');
-const filtersBox = document.getElementById('filters');
+const liveBadge = document.getElementById('live-badge');
+const liveLabel = document.getElementById('live-label');
 const filterMonth = document.getElementById('filter-month');
-const filterCategory = document.getElementById('filter-category');
-const filterSummary = document.getElementById('filter-summary');
-const listTotalBox = document.getElementById('list-total-box');
-const listTotal = document.getElementById('list-total');
-const chartEmpty = document.getElementById('chart-empty');
-const chartContent = document.getElementById('chart-content');
-const monthChart = document.getElementById('month-chart');
-const chartLegend = document.getElementById('chart-legend');
-const categoryChart = document.getElementById('category-chart');
+const filterText = document.getElementById('filter-text');
+const filterClear = document.getElementById('filter-clear');
+const speakerPanel = document.getElementById('speaker-panel');
+const cones = document.getElementById('cones');
+const formCard = document.getElementById('form-card');
+const addBtn = document.getElementById('add-btn');
 const exportMonth = document.getElementById('export-month');
 const exportBtn = document.getElementById('export-btn');
 const backupStatus = document.getElementById('backup-status');
@@ -64,7 +63,9 @@ function saveExpenses(list) {
 }
 
 // The filter choice is saved too, so the app opens the way you left it.
-// It's only a convenience, so if anything goes wrong we quietly fall back to "show everything".
+// It's only a convenience, so if anything goes wrong we quietly fall back to the defaults.
+// month: which month the screen shows ("all" from older versions becomes the current month,
+// see updateMonthOptions). category: the speaker cone that's picked, or "all".
 const FILTERS_KEY = 'filters';
 const NO_FILTERS = { month: 'all', category: 'all' };
 
@@ -101,8 +102,8 @@ let editingId = null;
 // or after "prevent this page from creating dialogs") block confirm() and it silently answers "Cancel".
 let confirmingDeleteId = null;
 
-// What the list is filtered by. "all" means no filter.
-// month looks like "2026-11" (the first 7 characters of a date), category like "Food".
+// What the screen shows. month looks like "2026-11" (the first 7 characters of a date),
+// category like "Food" ("all" = every category).
 let filters = loadFilters();
 
 // ===== 4. Helpers =====
@@ -166,10 +167,42 @@ function previousMonth(monthKey) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-// "2026-10" -> "October"
+// "2026-10" -> "October". A month from another year than now gets the year too: "October 2025".
 function monthName(monthKey) {
   const [year, month] = monthKey.split('-').map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString('en-PH', { month: 'long' });
+  const sameYear = year === new Date().getFullYear();
+  return new Date(year, month - 1, 1).toLocaleDateString('en-PH', {
+    month: 'long', year: sameYear ? undefined : 'numeric',
+  });
+}
+
+// "2026-10" -> "October 2026" (always with the year, for screen readers)
+function monthNameWithYear(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+}
+
+// The month you're in right now, e.g. "2026-11"
+function currentMonth() {
+  return todayString().slice(0, 7);
+}
+
+// The header over each day in the list: "Today", "Yesterday", a weekday for the rest of the
+// last week ("Wednesday"), otherwise "Nov 12" (plus the year if it isn't this year).
+// Built from the date's parts in local time, never new Date("YYYY-MM-DD") (that's UTC).
+function dayLabel(dateString) {
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // Math.round, because a day with a daylight-saving change isn't exactly 24 hours
+  const daysAgo = Math.round((today - date) / 86400000);
+  if (daysAgo === 0) return 'Today';
+  if (daysAgo === 1) return 'Yesterday';
+  if (daysAgo > 1 && daysAgo < 7) return date.toLocaleDateString('en-PH', { weekday: 'long' });
+  return date.toLocaleDateString('en-PH', {
+    month: 'short', day: 'numeric', year: year === now.getFullYear() ? undefined : 'numeric',
+  });
 }
 
 // "1 expense" / "3 expenses"
@@ -184,51 +217,57 @@ function matchesFilters(expense) {
   return monthOk && categoryOk;
 }
 
-// Fill the category filter by COPYING the options from the form's category dropdown,
-// so the list of categories lives in one place (index.html). Runs once at start-up.
-function fillCategoryFilter() {
-  for (const option of categoryInput.options) {
-    filterCategory.add(new Option(option.text, option.value));
-  }
-  // A saved category that no longer exists? Fall back to "all".
-  if (![...filterCategory.options].some((o) => o.value === filters.category)) {
-    filters.category = 'all';
-  }
-  filterCategory.value = filters.category;
-}
-
-// Rebuild the month filter from the months that actually have expenses (newest first).
-// Runs on every render, because adding/editing/deleting can create or remove a month.
 // The months that have at least one expense, newest first, e.g. ["2026-11", "2026-10"]
 function monthsWithExpenses() {
   // A Set keeps only unique values: ["2026-11", "2026-11", "2026-10"] -> {"2026-11", "2026-10"}
   return [...new Set(expenses.map(monthOf))].sort().reverse();
 }
 
-// Fills a month dropdown with "All months" + each month, and selects `selected`.
-// Used by both the list filter and the export picker, so they always show the same months.
-function fillMonthSelect(select, months, selected) {
+// Fills a month dropdown with each month (and "All months" first if includeAll), and selects `selected`.
+function fillMonthSelect(select, months, selected, includeAll) {
   select.innerHTML = '';
-  select.add(new Option('All months', 'all'));
+  if (includeAll) select.add(new Option('All months', 'all'));
   for (const month of months) {
     select.add(new Option(formatMonth(month), month));
   }
   select.value = selected;
 }
 
+// Rebuilds both month pickers. Runs on every render, because adding/editing/deleting can
+// create or remove a month.
 function updateMonthOptions() {
   const months = monthsWithExpenses();
 
-  // If the chosen month has no expenses any more (e.g. you deleted the last one), show all months
-  if (filters.month !== 'all' && !months.includes(filters.month)) {
-    filters.month = 'all';
+  // The Live badge: the months with expenses, plus the current month even when it's still
+  // empty (a new month starts with nothing logged). No "All months": the screen shows one month.
+  const badgeMonths = months.includes(currentMonth())
+    ? months
+    : [currentMonth(), ...months].sort().reverse();
+  // "all" (saved by an older version) or a month that's now empty: go to the current month
+  if (!badgeMonths.includes(filters.month)) {
+    filters.month = currentMonth();
     saveFilters(filters);
   }
-  fillMonthSelect(filterMonth, months, filters.month);
+  fillMonthSelect(filterMonth, badgeMonths, filters.month, false);
 
-  // The export picker: keep its choice if that month still has expenses, otherwise "All months"
+  // The export picker keeps "All months": keep its choice if that month still has expenses
   const exportChoice = months.includes(exportMonth.value) ? exportMonth.value : 'all';
-  fillMonthSelect(exportMonth, months, exportChoice);
+  fillMonthSelect(exportMonth, months, exportChoice, true);
+}
+
+// The badge's visible text and look. The current month is "live" (glowing red dot);
+// an earlier month is shown plainly as "Oct 2026".
+function renderLiveBadge() {
+  const isLive = filters.month === currentMonth();
+  liveLabel.textContent = isLive ? `Live: ${formatMonthShort(filters.month)}` : formatMonth(filters.month);
+  liveBadge.classList.toggle('is-past', !isLive);
+  filterMonth.setAttribute('aria-label', `Month: ${monthNameWithYear(filters.month)}`);
+}
+
+// "2026-11" -> "Nov"
+function formatMonthShort(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString('en-PH', { month: 'short' });
 }
 
 // Shows "45 / 200" under the note, so the limit is never a surprise.
@@ -259,7 +298,8 @@ function makeRowButton(label, action, expense, extraClass = '') {
   button.textContent = label;
   button.dataset.action = action;   // becomes data-action="edit" / "delete" / ...
   button.dataset.id = expense.id;   // becomes data-id="1795...-ab12"
-  button.setAttribute('aria-label', `${label}: ${expense.category} expense of ${formatPeso(expense.amount)}`);
+  button.setAttribute('aria-label',
+    `${label}: ${expense.category} expense of ${formatPeso(expense.amount)} on ${formatDate(expense.date)}`);
   return button;
 }
 
@@ -267,107 +307,122 @@ function makeRowButton(label, action, expense, extraClass = '') {
 function renderList() {
   list.innerHTML = ''; // clear the old list, then rebuild it from the array
   updateMonthOptions();
+  renderLiveBadge();
 
-  // Newest first. We sort a COPY ([...expenses]) so the saved data isn't reordered.
+  // This month's expenses, newest first. We sort a COPY ([...expenses]) so the saved data isn't reordered.
   // Dates are "YYYY-MM-DD" text, which sorts correctly as plain text.
   // Same date? The id starts with the time it was created, so newer ids win.
-  const sorted = [...expenses].sort(
-    (a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
-  );
+  const monthExpenses = [...expenses]
+    .filter((e) => monthOf(e) === filters.month)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
 
-  // Keep only the expenses that pass the filters. The saved data is untouched.
-  const visible = sorted.filter(matchesFilters);
-
-  for (const expense of visible) {
-    // Each row is built from small pieces with their own CSS classes:
-    //   <li class="expense">
-    //     <span class="expense-dot">            (the category's color)
-    //     <div class="expense-info"> title (the note, or the category), meta (category · date) </div>
-    //     <span class="expense-amount">
-    //     <div class="expense-actions"> Edit, Delete </div>
-    //   </li>
-    const item = makeElement('li', 'expense', '');
-
-    const dot = makeElement('span', 'expense-dot', '');
-    dot.style.background = categoryColor(expense.category);
-
-    // With a note: the note is the title, the category goes on the line under it.
-    // Without one: the category is the title. The date is always on the second line.
-    // textContent (inside makeElement) shows the note exactly as typed,
-    // so a note like "<b>hi</b>" can't turn into real HTML.
-    const info = makeElement('div', 'expense-info', '');
-    const meta = expense.note
-      ? `${expense.category} · ${formatDate(expense.date)}`
-      : formatDate(expense.date);
-    info.append(
-      makeElement('div', 'expense-title', expense.note || expense.category),
-      makeElement('div', 'expense-meta', meta)
-    );
-    // The full note shows when you hold a mouse over a cut-off title
-    if (expense.note) info.firstChild.title = expense.note;
-
-    const amount = makeElement('span', 'expense-amount', formatPeso(expense.amount));
-
-    const actions = makeElement('div', 'expense-actions', '');
-    if (expense.id === confirmingDeleteId) {
-      // This row is asking "are you sure?"
-      actions.append(
-        makeElement('span', 'confirm-text', 'Delete this?'),
-        makeRowButton('Yes, delete', 'confirm-delete', expense, 'btn-danger-solid'),
-        makeRowButton('Cancel', 'cancel-delete', expense)
-      );
-    } else {
-      actions.append(
-        makeRowButton('Edit', 'edit', expense),
-        makeRowButton('Delete', 'delete', expense, 'btn-danger')
-      );
-    }
-
-    item.append(dot, info, amount, actions);
-    list.appendChild(item);
-  }
-
+  // The cones are built first, because they decide whether the picked category still exists
+  renderSpeakerPanel(monthExpenses);
   renderLightbox();
 
-  // No expenses at all: hide the filters, they'd have nothing to filter
-  filtersBox.hidden = expenses.length === 0;
+  // Keep only the expenses that pass the category filter. The saved data is untouched.
+  const visible = monthExpenses.filter(matchesFilters);
 
-  // The empty message has two versions: nothing saved yet, or nothing matches the filters
+  // Group by day: one <li class="day"> per date, with a header and that day's rows.
+  //   <li class="day">
+  //     <h3 class="day-header"> Today ............ ₱230.00 </h3>
+  //     <ul class="day-rows"> <li class="expense">...</li> ... </ul>
+  //   </li>
+  let dayRows = null;
+  let lastDate = null;
+  for (const expense of visible) {
+    if (expense.date !== lastDate) {
+      lastDate = expense.date;
+      const dayTotal = visible
+        .filter((e) => e.date === expense.date)
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const day = makeElement('li', 'day', '');
+      const header = makeElement('h3', 'day-header', '');
+      header.append(
+        makeElement('span', 'day-label', dayLabel(expense.date)),
+        makeElement('span', 'day-total', formatPeso(dayTotal))
+      );
+      dayRows = makeElement('ul', 'day-rows', '');
+      day.append(header, dayRows);
+      list.append(day);
+    }
+    dayRows.append(makeExpenseRow(expense));
+  }
+
+  // Nothing to show: say why
   if (expenses.length === 0) {
-    emptyMessage.textContent = 'No expenses yet. Add your first one using the form.';
+    emptyMessage.textContent = 'Nothing logged yet. Tap Add expense to start.';
   } else {
-    emptyMessage.textContent = 'No expenses match these filters.';
+    emptyMessage.textContent = `No expenses in ${monthName(filters.month)} yet.`;
   }
   emptyMessage.hidden = visible.length > 0;
 
-  // Total of what's SHOWN (after filtering), beside the "Expenses" heading
-  const visibleTotal = visible.reduce((sum, e) => sum + e.amount, 0);
-  listTotal.textContent = formatPeso(visibleTotal);
-  listTotalBox.hidden = expenses.length === 0;
-
-  // Summary line under the filters: just the count (the money is in the heading now)
-  const filtered = filters.month !== 'all' || filters.category !== 'all';
-  filterSummary.textContent = filtered
-    ? `Showing ${visible.length} of ${countLabel(expenses.length)}`
-    : countLabel(expenses.length);
-  filterSummary.hidden = expenses.length === 0;
-
-  // The chart uses the same data, so redraw it whenever the list is redrawn
-  renderChart();
+  // "Showing Bills · Clear", only while a cone is picked
+  const filtered = filters.category !== 'all';
+  filterText.textContent = filtered ? `Showing ${filters.category} ·` : '';
+  filterClear.hidden = !filtered;
 
   // Nothing to export yet? Grey out the button.
   exportBtn.disabled = expenses.length === 0;
 }
 
-// ===== 5a. The lightbox: this calendar month's total =====
-// It always shows the CURRENT month (the list filters don't change it).
-// Under the total: how it compares with last month, if last month has any expenses.
-function renderLightbox() {
-  const thisMonth = todayString().slice(0, 7);
-  const lastMonth = previousMonth(thisMonth);
-  const sumOf = (month) => expenses.filter((e) => monthOf(e) === month).reduce((sum, e) => sum + e.amount, 0);
+// One expense row:
+//   <li class="expense">
+//     <span class="expense-dot">            (the category's color)
+//     <div class="expense-info"> title (the note, or the category), and the category under a note </div>
+//     <span class="expense-amount">
+//     <div class="expense-actions"> Edit, Delete </div>
+//   </li>
+function makeExpenseRow(expense) {
+  const item = makeElement('li', 'expense', '');
 
-  const spent = sumOf(thisMonth);
+  const dot = makeElement('span', 'expense-dot', '');
+  dot.style.background = categoryColor(expense.category);
+
+  // With a note: the note is the title, the category goes on the line under it.
+  // Without one: the category is the title, and there's no second line (the day header has the date).
+  // textContent (inside makeElement) shows the note exactly as typed,
+  // so a note like "<b>hi</b>" can't turn into real HTML.
+  const info = makeElement('div', 'expense-info', '');
+  const title = makeElement('div', 'expense-title', expense.note || expense.category);
+  info.append(title);
+  if (expense.note) {
+    title.title = expense.note; // the full note shows when you hold a mouse over a cut-off title
+    info.append(makeElement('div', 'expense-meta', expense.category));
+  }
+
+  const amount = makeElement('span', 'expense-amount', formatPeso(expense.amount));
+
+  const actions = makeElement('div', 'expense-actions', '');
+  if (expense.id === confirmingDeleteId) {
+    // This row is asking "are you sure?"
+    actions.append(
+      makeElement('span', 'confirm-text', 'Delete this?'),
+      makeRowButton('Yes, delete', 'confirm-delete', expense, 'btn-danger-solid'),
+      makeRowButton('Cancel', 'cancel-delete', expense)
+    );
+  } else {
+    actions.append(
+      makeRowButton('Edit', 'edit', expense),
+      makeRowButton('Delete', 'delete', expense, 'btn-danger')
+    );
+  }
+
+  item.append(dot, info, amount, actions);
+  return item;
+}
+
+// ===== 5a. The lightbox: the chosen month's total =====
+// Under the total: how it compares with the month before, if that month has any expenses.
+function renderLightbox() {
+  const month = filters.month;
+  const lastMonth = previousMonth(month);
+  const sumOf = (m) => expenses.filter((e) => monthOf(e) === m).reduce((sum, e) => sum + e.amount, 0);
+
+  totalLabel.textContent = month === currentMonth() ? 'Spent this month' : `Spent in ${monthName(month)}`;
+
+  const spent = sumOf(month);
   totalEl.textContent = formatWholePeso(spent);
   fitTotal();
 
@@ -396,7 +451,7 @@ function fitTotal() {
   }
 }
 
-// ===== 5b. Render the chart: bars are just <div>s with a width in % =====
+// ===== 5b. The speaker panel: the month's biggest categories as "speaker cones" =====
 
 // Each category's color lives in style.css as a variable, e.g. --cat-food.
 // This turns "Food" into "var(--cat-food)" and "Nights out" into "var(--cat-nights-out)"
@@ -406,13 +461,13 @@ function categoryColor(category) {
   return `var(--cat-${category.toLowerCase().replace(/\s+/g, '-')}, var(--cat-other))`;
 }
 
-// Categories in the same order as the form's dropdown, so colors always appear in the same order
+// Categories in the same order as the form's dropdown
 function categoryOrder() {
   return [...categoryInput.options].map((option) => option.value);
 }
 
-// Adds up amounts into groups. Example: sumBy(expenses, monthOf)
-//   -> Map { "2026-11" => 11350, "2026-10" => 850 }
+// Adds up amounts into groups. Example: sumBy(expenses, (e) => e.category)
+//   -> Map { "Food" => 850, "Bills" => 1250 }
 // A Map is like an object made for "key -> value" lookups.
 function sumBy(items, getKey) {
   const totals = new Map();
@@ -423,99 +478,84 @@ function sumBy(items, getKey) {
   return totals;
 }
 
-// One chart row: a label line ("Nov 2026 ...... ₱11,350.00") with a bar underneath.
-// widthPercent: how long the bar is compared to the biggest one (100 = full width)
-function makeChartRow(label, amountText, widthPercent) {
-  const row = makeElement('div', 'chart-row', '');
-  const labels = makeElement('div', 'chart-row-label', '');
-  labels.append(makeElement('span', '', label), makeElement('span', 'chart-amount', amountText));
-
-  const track = makeElement('div', 'bar-track', ''); // the light grey "lane" the bar sits in
-  const bar = makeElement('div', 'bar', '');
-  bar.style.width = `${widthPercent}%`;
-  track.append(bar);
-
-  row.append(labels, track);
-  return { row, bar };
+// Whole percents that always add up to exactly 100 ("largest remainder"):
+// round everything down, then give the leftover points to the biggest fractions.
+// [44.4, 32.3, 23.3] -> [44, 32, 24]
+function percentsSummingTo100(amounts) {
+  const total = amounts.reduce((sum, a) => sum + a, 0);
+  const exact = amounts.map((a) => (a / total) * 100);
+  const result = exact.map(Math.floor);
+  let leftover = 100 - result.reduce((sum, p) => sum + p, 0);
+  const byRemainder = exact
+    .map((value, index) => ({ index, remainder: value - Math.floor(value) }))
+    .sort((a, b) => b.remainder - a.remainder);
+  for (const { index } of byRemainder) {
+    if (leftover === 0) break;
+    result[index]++;
+    leftover--;
+  }
+  return result;
 }
 
-function renderChart() {
-  const hasData = expenses.length > 0;
-  chartEmpty.hidden = hasData;
-  chartContent.hidden = !hasData;
-  if (!hasData) return;
+// Up to 4 cones: with 4 or fewer categories, one cone each; with more, the top 3 + "Rest".
+// A cone is a button that shows only that category in the list ("Rest" isn't a button).
+function renderSpeakerPanel(monthExpenses) {
+  cones.innerHTML = '';
+  speakerPanel.hidden = monthExpenses.length === 0;
 
+  const totals = sumBy(monthExpenses, (e) => e.category);
+  // Biggest first; equal amounts keep the form's order, so the cones don't jump around
   const order = categoryOrder();
-
-  // --- By month: one bar per month, split into colored pieces by category ---
-  monthChart.innerHTML = '';
-  const monthTotals = sumBy(expenses, monthOf);
-  const biggestMonth = Math.max(...monthTotals.values()); // the longest bar = 100%
-  const months = [...monthTotals.keys()].sort().reverse(); // newest first, like the list
-
-  for (const month of months) {
-    const monthExpenses = expenses.filter((e) => monthOf(e) === month);
-    const byCategory = sumBy(monthExpenses, (e) => e.category);
-    const monthTotal = monthTotals.get(month);
-
-    const { row, bar } = makeChartRow(
-      formatMonth(month),
-      formatPeso(monthTotal),
-      (monthTotal / biggestMonth) * 100
-    );
-
-    // Each piece gets "flex-grow" equal to its amount, so the pieces share the bar
-    // in proportion: ₱10,000 gets 10× more room than ₱1,000.
-    const breakdown = [];
-    for (const category of order) {
-      const amount = byCategory.get(category);
-      if (!amount) continue;
-      const piece = makeElement('span', 'bar-piece', '');
-      piece.style.flexGrow = amount;
-      piece.style.background = categoryColor(category);
-      piece.title = `${category}: ${formatPeso(amount)}`; // shows when you hover with a mouse
-      bar.append(piece);
-      breakdown.push(`${category} ${formatPeso(amount)}`);
-    }
-
-    // Screen readers can't "see" colors, so give them the breakdown as text
-    row.append(makeElement('span', 'visually-hidden', `Breakdown: ${breakdown.join(', ')}`));
-    monthChart.append(row);
-  }
-
-  // --- Legend: a colored dot + name for each category that has spending ---
-  const categoryTotals = sumBy(expenses, (e) => e.category);
-  chartLegend.innerHTML = '';
-  for (const category of order) {
-    if (!categoryTotals.has(category)) continue;
-    const item = makeElement('li', 'legend-item', '');
-    const swatch = makeElement('span', 'legend-swatch', '');
-    swatch.style.background = categoryColor(category);
-    item.append(swatch, category);
-    chartLegend.append(item);
-  }
-
-  // --- By category: one bar per category, biggest first, with its share of the total ---
-  categoryChart.innerHTML = '';
-  const grandTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const biggestCategory = Math.max(...categoryTotals.values());
-  const categories = [...categoryTotals.keys()].sort(
-    (a, b) => categoryTotals.get(b) - categoryTotals.get(a)
+  const sorted = [...totals.keys()].sort(
+    (a, b) => totals.get(b) - totals.get(a) || order.indexOf(a) - order.indexOf(b)
   );
 
-  for (const category of categories) {
-    const amount = categoryTotals.get(category);
-    const percent = Math.round((amount / grandTotal) * 100);
-    // A real but tiny share would round to "0%", which looks wrong, so say "<1%" instead
-    const percentText = percent === 0 ? '<1%' : `${percent}%`;
-    const { row, bar } = makeChartRow(
-      category,
-      `${formatPeso(amount)} · ${percentText}`,
-      (amount / biggestCategory) * 100
-    );
-    bar.style.background = categoryColor(category);
-    categoryChart.append(row);
+  let slots = sorted.map((category) => ({ category, amount: totals.get(category) }));
+  if (slots.length > 4) {
+    const rest = slots.slice(3).reduce((sum, s) => sum + s.amount, 0);
+    slots = [...slots.slice(0, 3), { category: null, amount: rest }];
   }
+
+  // The picked category has no cone in this month (e.g. you switched months): show everything
+  if (filters.category !== 'all' && !slots.some((s) => s.category === filters.category)) {
+    filters.category = 'all';
+    saveFilters(filters);
+  }
+
+  const percents = slots.length ? percentsSummingTo100(slots.map((s) => s.amount)) : [];
+  slots.forEach((slot, i) => {
+    const percent = percents[i];
+    const name = slot.category ?? 'Rest';
+
+    const cone = document.createElement(slot.category ? 'button' : 'div');
+    cone.className = 'cone';
+    if (slot.category) {
+      const picked = filters.category === slot.category;
+      cone.type = 'button';
+      cone.dataset.category = slot.category;
+      cone.setAttribute('aria-pressed', String(picked));
+      cone.setAttribute('aria-label', picked
+        ? `${name}, ${percent} percent. Showing only ${name}`
+        : `${name}, ${percent} percent. Show only ${name}`);
+    } else {
+      cone.setAttribute('role', 'img');
+      cone.setAttribute('aria-label', `Rest, ${percent} percent`);
+    }
+
+    // The gold ring is a conic-gradient: gold from 0 to the percent, dark track after it.
+    // The --p variable carries the percent into the CSS.
+    const ring = makeElement('span', 'cone-ring', '');
+    ring.style.setProperty('--p', `${percent}%`);
+    const cap = makeElement('span', 'cone-cap', `${percent}%`);
+    ring.append(cap);
+    ring.setAttribute('aria-hidden', 'true');
+
+    const label = makeElement('span', 'cone-label', name);
+    label.setAttribute('aria-hidden', 'true');
+
+    cone.append(ring, label);
+    cones.append(cone);
+  });
 }
 
 // ===== 5c. Backup: export to a CSV file =====
@@ -901,6 +941,12 @@ form.addEventListener('submit', function (event) {
     note: noteInput.value.trim(),
   };
 
+  // The screen shows one month. If this expense is in another month (or a category that isn't
+  // picked), switch the screen to it, so the expense you just saved is always visible.
+  if (values.date.slice(0, 7) !== filters.month) filters.month = values.date.slice(0, 7);
+  if (filters.category !== 'all' && filters.category !== values.category) filters.category = 'all';
+  saveFilters(filters);
+
   // Same form, two jobs: update if we're editing, otherwise add
   if (editingId) {
     updateExpense(editingId, values);
@@ -941,19 +987,51 @@ list.addEventListener('click', function (event) {
   }
 });
 
-// Changing either filter: remember the choice, save it, redraw.
-// "change" fires when you pick a different option in a dropdown.
+// Picking a month in the Live badge: remember the choice, save it, redraw.
+// "change" fires when you pick a different option in the phone's month picker.
 filterMonth.addEventListener('change', function () {
   filters.month = filterMonth.value;
   saveFilters(filters);
   renderList();
 });
 
-filterCategory.addEventListener('change', function () {
-  filters.category = filterCategory.value;
+// Tapping a cone shows only that category; tapping the same cone again shows everything.
+// One listener on the panel handles every cone (event delegation, like the list).
+cones.addEventListener('click', function (event) {
+  const cone = event.target.closest('button[data-category]');
+  if (!cone) return;
+  const category = cone.dataset.category;
+  const hadFocus = document.activeElement === cone;
+  filters.category = filters.category === category ? 'all' : category;
+  saveFilters(filters);
+  renderList();
+  // The panel was rebuilt, so if the cone had keyboard focus, put it back on the same cone
+  if (hadFocus) cones.querySelector(`button[data-category="${CSS.escape(category)}"]`)?.focus();
+});
+
+// "Clear" next to "Showing Bills": back to every category
+filterClear.addEventListener('click', function () {
+  filters.category = 'all';
   saveFilters(filters);
   renderList();
 });
+
+// The floating Add expense button: go to the form, ready to type an amount.
+// (In the next step the form moves into a sheet that slides up instead.)
+addBtn.addEventListener('click', function () {
+  if (confirmingDeleteId) cancelDelete();
+  formCard.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  amountInput.focus({ preventScroll: true });
+});
+
+// While the form is on screen the floating button would just cover it (and ride up on the
+// keyboard), so it steps aside. IntersectionObserver tells us when the form scrolls in or out.
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver(
+    ([entry]) => document.body.classList.toggle('form-in-view', entry.isIntersecting),
+    { threshold: 0.25 }
+  ).observe(formCard);
+}
 
 exportBtn.addEventListener('click', exportCsv);
 
@@ -1022,7 +1100,6 @@ if ('serviceWorker' in navigator) {
   offlineStatus.textContent = 'This browser can\'t save the app for offline use.';
 }
 
-fillCategoryFilter();
 resetForm(); // start in "add mode" with today's date
 renderList();
 
