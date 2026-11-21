@@ -19,6 +19,16 @@ const deleteNo = document.getElementById('delete-no');
 const toast = document.getElementById('toast');
 const toastText = document.getElementById('toast-text');
 const toastUndo = document.getElementById('toast-undo');
+const budgetBox = document.getElementById('budget-box');
+const budgetFill = document.getElementById('budget-fill');
+const budgetOf = document.getElementById('budget-of');
+const budgetLeft = document.getElementById('budget-left');
+const settingsSheet = document.getElementById('settings-sheet');
+const settingsBtn = document.getElementById('settings-btn');
+const settingsClose = document.getElementById('settings-close');
+const budgetInput = document.getElementById('budget');
+const budgetField = document.getElementById('budget-field');
+const budgetError = document.getElementById('budget-error');
 const list = document.getElementById('expense-list');
 const totalEl = document.getElementById('total');
 const totalCompare = document.getElementById('total-compare');
@@ -119,6 +129,29 @@ function saveFilters(value) {
   }
 }
 
+// The monthly budget: a number of pesos, or null when there's none (the key is then removed).
+const BUDGET_KEY = 'budget';
+
+function loadBudget() {
+  try {
+    const value = Number(localStorage.getItem(BUDGET_KEY));
+    return value > 0 ? value : null; // missing, 0 or rubbish = no budget
+  } catch (error) {
+    return null;
+  }
+}
+
+// Returns false if the browser wouldn't save it
+function saveBudget(value) {
+  try {
+    if (value === null) localStorage.removeItem(BUDGET_KEY);
+    else localStorage.setItem(BUDGET_KEY, String(value));
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
 // ===== 3. State: the app's data =====
 // Every expense looks like: { id, amount, category, date, note }
 // We start with whatever was saved last time.
@@ -130,6 +163,9 @@ let editingId = null;
 // What the screen shows. month looks like "2026-11" (the first 7 characters of a date),
 // category like "Food" ("all" = every category).
 let filters = loadFilters();
+
+// The monthly budget in pesos, or null
+let budget = loadBudget();
 
 // ===== 4. Helpers =====
 
@@ -400,7 +436,8 @@ function makeExpenseRow(expense) {
 }
 
 // ===== 5a. The lightbox: the chosen month's total =====
-// Under the total: how it compares with the month before, if that month has any expenses.
+// Under the total: with a budget, a bar and what's left of it;
+// without one, how the month compares with the month before (if that month has expenses).
 function renderLightbox() {
   const month = filters.month;
   const lastMonth = previousMonth(month);
@@ -411,6 +448,19 @@ function renderLightbox() {
   const spent = sumOf(month);
   totalEl.textContent = formatWholePeso(spent);
   fitTotal();
+
+  budgetBox.hidden = budget === null;
+  if (budget !== null) {
+    totalCompare.hidden = true;
+    // The bar: how much of the budget is used, never past full
+    const used = Math.min(spent / budget, 1);
+    budgetFill.style.width = `${used * 100}%`;
+    budgetOf.textContent = `of ${formatWholePeso(budget)}`;
+    // Whole pesos, like the total. Over budget stays calm: same dark ink, no red.
+    const left = Math.round(budget) - Math.round(spent);
+    budgetLeft.textContent = left >= 0 ? `${formatWholePeso(left)} left` : `${formatWholePeso(-left)} over`;
+    return;
+  }
 
   const before = sumOf(lastMonth);
   if (before === 0) {
@@ -1145,6 +1195,51 @@ filterClear.addEventListener('click', function () {
 
 // The floating Add expense button opens the sheet for a new expense
 addBtn.addEventListener('click', () => openSheet(null));
+
+// ===== 7b. Backup & settings sheet =====
+// "Backup & settings" (under the motto) opens it, with the budget filled in
+settingsBtn.addEventListener('click', function () {
+  // Plain digits in the field (10000, 2500.5), so it's easy to edit
+  budgetInput.value = budget === null ? '' : String(budget);
+  showBudgetError(false);
+  settingsSheet.showModal();
+  settingsSheet.querySelector('.sheet-scroll').scrollTop = 0;
+});
+
+settingsClose.addEventListener('click', () => settingsSheet.close());
+
+// A tap on the dark backdrop closes it, like the expense sheet
+settingsSheet.addEventListener('click', function (event) {
+  if (event.target === settingsSheet) settingsSheet.close();
+});
+
+// Closed (×, Esc, backdrop): focus goes back to the link that opened it
+settingsSheet.addEventListener('close', () => settingsBtn.focus({ preventScroll: true }));
+
+function showBudgetError(show, message = 'Enter an amount, like 10000, or leave it empty') {
+  budgetError.textContent = message;
+  budgetError.hidden = !show;
+  budgetField.classList.toggle('invalid', show);
+  budgetInput.setAttribute('aria-invalid', String(show));
+}
+
+// The budget saves as you type, so closing the sheet any way never loses it.
+// Empty = no budget. Something that isn't an amount shows the message and isn't saved.
+budgetInput.addEventListener('input', function () {
+  const text = budgetInput.value.trim();
+  const value = text === '' ? null : parseAmount(text);
+  if (text !== '' && value === null) {
+    showBudgetError(true);
+    return;
+  }
+  showBudgetError(false);
+  if (!saveBudget(value)) {
+    showBudgetError(true, "Can't save on this browser");
+    return;
+  }
+  budget = value;
+  renderLightbox(); // the lightbox behind the sheet updates straight away
+});
 
 exportBtn.addEventListener('click', exportCsv);
 
