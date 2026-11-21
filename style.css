@@ -2,62 +2,80 @@
    1. Design tokens: all colors and sizes in one place.
    "--name" is a CSS variable. We use it later with var(--name).
    Changing a color here changes it everywhere.
+
+   The look is "After Hours": a listening bar after closing. A dark room,
+   one glowing white lightbox (the monthly total), one gold accent.
+   The app is ALWAYS dark, so there is no light theme any more.
    ========================================================= */
 :root {
-  --bg: #f4f5f7;          /* page background */
-  --surface: #ffffff;     /* cards */
-  --text: #1c1e21;        /* main text */
-  --muted: #5f6670;       /* secondary text (dates, labels) */
-  --border: #d9dce1;
-  --primary: #1f6f5c;     /* main button, focus ring */
-  --primary-text: #ffffff;
-  --danger: #b42318;      /* delete */
-  --badge-bg: #e3f1ec;
-  --badge-text: #1f6f5c;
+  color-scheme: dark;
 
-  /* Chart colors: one per category, chosen to be easy to tell apart.
-     The names must match the categories in lowercase (app.js builds "--cat-" + "food"). */
-  --cat-food: #e07a1f;          /* orange */
-  --cat-transport: #2f7ed8;     /* blue */
-  --cat-bills: #8e5bd6;         /* purple */
-  --cat-shopping: #d6457a;      /* pink */
-  --cat-health: #2a9d6f;        /* green */
-  --cat-entertainment: #c99a06; /* amber */
-  --cat-school: #1a9fb0;        /* teal */
-  --cat-other: #7a828c;         /* grey */
-  --track: #eceef1;             /* the empty lane behind each bar */
+  /* Room */
+  --ground: #1b1411;          /* page background */
+  --surface: #241a16;         /* cards, sheets */
+  --surface-raised: #2f231e;  /* round icon buttons */
+  --line: #3a2c25;            /* card edges, rules (decorative) */
+  --line-soft: #2a201c;       /* row dividers */
+  --control-line: #7a6658;    /* chip + input borders, 3.1:1 on surface */
 
-  --radius: 12px;
-  --gap: 16px;
+  /* Text */
+  --ink: #efe6d8;             /* 14.7:1 on ground */
+  --ink-muted: #bfb2a3;       /* 8.8:1 */
+  --ink-faint: #8c7f74;       /* motto + placeholders only, 4.7:1 */
+
+  /* The lit sign */
+  --lightbox: #f6f1e7;
+  --lightbox-ink: #1b1411;
+  --lightbox-muted: #5b4a40;  /* 7.5:1 on lightbox */
+  --lightbox-track: #e3dacb;
+
+  /* Accent + wood */
+  --gold: #d9b35e;            /* the ONLY accent; dark text on it */
+  --cone-track: #2a1f1a;
+  --walnut-light: #7a5236;
+  --walnut: #5e3d27;
+  --walnut-ink: #f6e8d6;
+  --cone: #141110;
+  --cone-cap: #3a3330;
+  --signal: #ff6a4d;          /* Live dot only */
+  --live-ink: #ffe9c2;
+  --danger: #f2877d;          /* delete text, errors (8:1 on ground) */
+
+  /* Category dots: names must match app.js ("--cat-" + the category, lowercase, spaces -> "-") */
+  --cat-food: #e0904a;
+  --cat-transport: #8fb3d9;
+  --cat-bills: #b79ae8;
+  --cat-shopping: #e98ba8;
+  --cat-health: #7fc8a0;
+  --cat-nights-out: #e8d27a;
+  --cat-school: #6fc6cf;
+  --cat-other: #a79c92;
+  /* "Entertainment" becomes "Nights out" in a later step. Until then it borrows that color. */
+  --cat-entertainment: var(--cat-nights-out);
+
+  /* Type */
+  --font-sans: Outfit, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-hand: "Caveat Brush", cursive;
+
+  /* Space */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;
+  --space-4: 16px; --space-5: 20px; --space-6: 24px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 14px;  /* inputs */
+  --radius-lg: 18px;  /* cards */
+  --radius-xl: 22px;  /* lightbox */
+  --radius-pill: 999px;
+
+  /* Light */
+  --glow-lightbox: 0 0 0 1px #fff8ea, 0 0 46px rgba(255,236,200,.28), 0 18px 40px rgba(0,0,0,.45);
+  --glow-button: 0 0 30px rgba(255,236,200,.3);
+
+  /* Motion: a strong ease-out, so presses answer immediately */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
   --tap: 44px;            /* minimum height for anything you tap (finger-sized) */
-}
-
-/* Dark mode: when the phone/computer is set to dark, swap the colors.
-   Everything else stays the same because it all uses the variables above. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #121416;
-    --surface: #1d2023;
-    --text: #e8eaed;
-    --muted: #a0a7b0;
-    --border: #353a40;
-    --primary: #4fb79c;
-    --primary-text: #0b1f1a;
-    --danger: #f2877d;
-    --badge-bg: #1f3a33;
-    --badge-text: #8fd6c2;
-
-    /* Slightly brighter chart colors so they stand out on a dark background */
-    --cat-food: #f2994a;
-    --cat-transport: #5a9df0;
-    --cat-bills: #a984e8;
-    --cat-shopping: #ec6d9b;
-    --cat-health: #4cc293;
-    --cat-entertainment: #e6bb2e;
-    --cat-school: #3fc0d0;
-    --cat-other: #9aa2ac;
-    --track: #2a2e33;
-  }
 }
 
 /* =========================================================
@@ -76,118 +94,149 @@
   display: none !important;
 }
 
+html {
+  background: var(--ground);
+  /* No grey flash when you tap a button: each control has its own pressed look instead */
+  -webkit-tap-highlight-color: transparent;
+  /* Don't let the phone enlarge the text by itself when it's turned sideways */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  /* "system-ui" uses the phone's/computer's own font: fast and familiar */
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  min-height: 100dvh; /* dvh = the height you can actually see, with the browser bars showing */
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-sans);
   font-size: 16px;   /* 16px+ stops iPhones from zooming in when you tap an input */
   line-height: 1.5;
+  /* Keep content out from under the notch / rounded corners when the phone is sideways */
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 h1,
-h2 {
+h2,
+h3 {
   margin: 0;
   line-height: 1.2;
 }
 
 h2 {
-  font-size: 1.125rem;
-  margin-bottom: var(--gap);
+  font-size: 1.125rem; /* 18px */
+  font-weight: 700;
+  margin-bottom: var(--space-4);
+}
+
+/* Every number lines up: all digits the same width */
+#total,
+.expense-amount,
+.list-total,
+.chart-amount,
+.hint,
+.summary {
+  font-variant-numeric: tabular-nums;
 }
 
 /* =========================================================
-   3. Header with the total
+   3. Header: logo + name
    ========================================================= */
 .app-header {
-  display: flex;
-  flex-wrap: wrap;               /* lets the total drop below the title on narrow phones */
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px var(--gap);
-  padding: var(--gap);
-  max-width: 960px;
+  max-width: 480px;
   margin: 0 auto;
-}
-
-.app-header h1 {
-  font-size: 1.375rem;
+  /* At least 16px at the top, more on phones with a notch (env() is 0 elsewhere) */
+  padding: calc(16px + env(safe-area-inset-top, 0px)) var(--space-5) 0;
 }
 
 /* Icon + title side by side, centered vertically */
 .app-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3);
+  min-height: 44px;
+  font-size: 1.1875rem; /* 19px */
+  font-weight: 700;
 }
 
-/* The image file is 160×160, shown at 40×40, so it stays sharp on high-resolution phone screens */
+/* The monkey in a round frame with a thin gold ring.
+   The image file is 160×160, shown at 44×44, so it stays sharp on high-resolution screens */
 .app-icon {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0; /* never squash the icon if the title gets tight */
-}
-
-/* On phones the longer title pushes the total onto its own line, so line it up on the left.
-   On wide screens (see the media query below) it sits on the right, next to the title. */
-.total {
-  margin: 0;
-  text-align: left;
-}
-
-@media (min-width: 768px) {
-  .total {
-    text-align: right;
-  }
-}
-
-.total-label {
-  display: block;
-  font-size: 0.8125rem;
-  color: var(--muted);
-}
-
-#total {
-  font-size: 1.5rem;
-  font-variant-numeric: tabular-nums; /* digits all the same width, so numbers line up */
+  border-radius: 50%;
+  background: #2b201b;
+  box-shadow: 0 0 0 1.5px var(--gold);
+  object-fit: cover;
 }
 
 /* =========================================================
-   4. Layout: ONE column on phones (mobile-first)...
+   4. Layout: one centred column on every screen
    ========================================================= */
 .layout {
   display: grid;
-  gap: var(--gap);
-  padding: 0 var(--gap) var(--gap);
-  max-width: 960px;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-5) var(--space-5);
+  max-width: 480px;
   margin: 0 auto;
-}
-
-/* ...and TWO columns once the screen is at least 768px wide (tablets, laptops) */
-@media (min-width: 768px) {
-  .layout {
-    grid-template-columns: 320px 1fr; /* form: fixed width, list: the rest */
-    align-items: start;
-  }
-
-  /* The chart gets the full width underneath: "1 / -1" = from the first column line to the last */
-  .chart-card,
-  .backup-card {
-    grid-column: 1 / -1;
-  }
 }
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--gap);
-  min-width: 0; /* lets long notes wrap instead of stretching the card */
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  min-width: 0; /* lets long notes shrink instead of stretching the card */
 }
 
 /* =========================================================
-   5. Form
+   5. Lightbox: this month's total, the one glowing thing
+   ========================================================= */
+.lightbox {
+  background: var(--lightbox);
+  color: var(--lightbox-ink);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glow-lightbox);
+  padding: 22px 22px 20px;
+  min-width: 0;
+}
+
+.lightbox p {
+  margin: 0;
+}
+
+.lightbox-label {
+  font-size: 0.9375rem; /* 15px */
+  font-weight: 600;
+  color: var(--lightbox-muted);
+}
+
+.lightbox-total {
+  overflow: hidden;      /* app.js measures this box to shrink a very long total */
+  white-space: nowrap;
+}
+
+#total {
+  display: block;
+  font-size: 72px;
+  line-height: 72px;
+  font-weight: 800;
+  letter-spacing: -2.5px;
+}
+
+/* Smaller steps for big totals (app.js picks one if 72px doesn't fit) */
+.lightbox-total.is-medium #total { font-size: 56px; line-height: 64px; letter-spacing: -2px; }
+.lightbox-total.is-small #total  { font-size: 44px; line-height: 56px; letter-spacing: -1.5px; }
+
+.lightbox-compare {
+  margin-top: var(--space-2) !important;
+  font-size: 0.9375rem;
+  color: var(--lightbox-muted);
+}
+
+/* =========================================================
+   6. Form
    ========================================================= */
 #expense-form {
   display: grid;
@@ -197,8 +246,9 @@ h2 {
 .field label {
   display: block;
   font-weight: 600;
-  font-size: 0.9375rem;
-  margin-bottom: 4px;
+  font-size: 0.9375rem; /* 15px */
+  margin-bottom: 6px;
+  color: var(--ink);
 }
 
 /* The "45 / 200" character counter under the note */
@@ -207,8 +257,7 @@ h2 {
   margin-top: 4px;
   text-align: right;
   font-size: 0.8125rem;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
 }
 
 .hint.near-limit {
@@ -218,19 +267,25 @@ h2 {
 
 .optional {
   font-weight: 400;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 input,
 select {
   width: 100%;
-  min-height: var(--tap);
-  padding: 8px 12px;
-  font: inherit;               /* inputs don't inherit the page font by default */
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  min-height: 50px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 16px;             /* never smaller: iPhones zoom into inputs under 16px */
+  color: var(--ink);
+  background: var(--ground);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-md);
+}
+
+input::placeholder {
+  color: var(--ink-faint);
+  opacity: 1; /* Firefox fades placeholders by default */
 }
 
 /* The ₱ sign sitting inside the amount box */
@@ -240,20 +295,20 @@ select {
 
 .currency {
   position: absolute;
-  left: 12px;
+  left: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--muted);
-  pointer-events: none; /* clicks go through to the input */
+  color: var(--ink-muted);
+  pointer-events: none; /* taps go through to the input */
 }
 
 .amount-input input {
-  padding-left: 30px; /* make room for the ₱ */
+  padding-left: 32px; /* make room for the ₱ */
 }
 
 .form-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .form-actions .btn {
@@ -261,72 +316,109 @@ select {
 }
 
 /* =========================================================
-   6. Buttons
+   7. Buttons
    ========================================================= */
 .btn {
   min-height: var(--tap);
-  padding: 8px 16px;
+  padding: 8px 18px;
   font: inherit;
+  font-size: 0.9375rem;
   font-weight: 600;
-  color: var(--text);
+  color: var(--ink);
   background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-pill);
   cursor: pointer;
+  /* Phone feel: tap fires at once (no double-tap-zoom wait), and holding a button
+     doesn't select its label */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Only transform changes on press, so name only that (never "transition: all") */
+  transition: transform 100ms var(--ease-out);
 }
 
-.btn:hover {
-  border-color: var(--muted);
+/* Pressed: shrink a little the moment the finger lands, so the app feels like it's listening */
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
+/* The glowing light button: the main action (Add expense, Export) */
 .btn-primary {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--primary-text);
+  background: var(--lightbox);
+  border-color: var(--lightbox);
+  color: var(--lightbox-ink);
+  box-shadow: var(--glow-button);
+  font-weight: 700;
 }
 
-.btn-primary:hover {
-  filter: brightness(1.1);
-  border-color: var(--primary);
+/* The form's Add/Save button is the big one */
+.form-actions .btn-primary {
+  min-height: 58px;
+  font-size: 1.125rem; /* 18px */
 }
 
 .btn-danger {
   color: var(--danger);
 }
 
-/* The filled red "Yes, delete" button: clearly the dangerous choice */
+/* The filled "Yes, delete" button: clearly the dangerous choice (dark text on red) */
 .btn-danger-solid {
   background: var(--danger);
   border-color: var(--danger);
-  color: var(--surface);
-}
-
-.btn-danger-solid:hover {
-  border-color: var(--danger);
-  filter: brightness(1.1);
+  color: var(--lightbox-ink);
 }
 
 .btn-small {
+  min-height: 36px;
   font-size: 0.875rem;
-  padding: 6px 12px;
+  padding: 4px 14px;
 }
 
-/* Keyboard users see a clear ring on whatever is focused */
+.btn:disabled {
+  opacity: 0.4;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Hover only on devices with a real mouse. On phones a tap would leave the hover look "stuck". */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled) {
+    border-color: var(--ink-muted);
+  }
+  .btn-primary:hover:not(:disabled),
+  .btn-danger-solid:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
+  .btn-primary:hover:not(:disabled) {
+    border-color: var(--lightbox);
+  }
+  .btn-danger-solid:hover:not(:disabled) {
+    border-color: var(--danger);
+  }
+}
+
+/* Keyboard users see a clear gold ring on whatever is focused */
 :focus-visible {
-  outline: 3px solid var(--primary);
+  outline: 3px solid var(--gold);
   outline-offset: 2px;
 }
 
+/* Tap targets: no double-tap-zoom wait on the dropdowns either */
+select {
+  touch-action: manipulation;
+}
+
 /* =========================================================
-   7. Expense list
+   8. Expense list
    ========================================================= */
 /* "Expenses ........ ₱12,200.00": heading on the left, total pushed to the right */
 .list-header {
   display: flex;
   align-items: baseline;          /* line up the bottoms of the two texts */
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: var(--gap);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .list-header h2 {
@@ -335,8 +427,8 @@ select {
 
 .list-total {
   margin: 0;
-  font-size: 1.125rem;
-  font-variant-numeric: tabular-nums;
+  font-size: 1.0625rem;
+  font-weight: 700;
 }
 
 /* Hidden on screen, but still read aloud by screen readers */
@@ -354,21 +446,20 @@ select {
 .filters {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
-/* "Showing 2 of 3 expenses · ₱1,350.00 of ₱11,350.00" */
+/* "Showing 2 of 3 expenses" */
 .summary {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   font-size: 0.875rem;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
 }
 
 .empty {
   margin: 0;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 .expense-list {
@@ -377,14 +468,18 @@ select {
   padding: 0;
 }
 
+/* One row:  • Jollibee lunch with classmates     ₱185.00
+               Food · Nov 21, 2026        [Edit] [Delete]
+   A grid with 3 columns: the dot, the text (takes the rest), the amount. */
 .expense {
-  display: flex;
-  flex-wrap: wrap;            /* on very narrow screens the buttons move under the text */
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+  row-gap: var(--space-2);
   align-items: center;
-  justify-content: space-between;
-  gap: 8px 12px;
-  padding: 12px 0;
-  border-top: 1px solid var(--border);
+  min-height: 62px;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--line-soft);
 }
 
 .expense:first-child {
@@ -392,48 +487,50 @@ select {
   padding-top: 0;
 }
 
-.expense-info {
-  flex: 1 1 180px;
-  min-width: 0;
+.expense-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  align-self: start;
+  margin-top: 7px; /* lines it up with the middle of the title's first line */
 }
 
-.expense-top {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+.expense-info {
+  min-width: 0; /* lets the title shrink and get "…" instead of pushing the amount away */
+}
+
+/* The note (or the category): one line, cut off with "…" if it's long */
+.expense-title {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.expense-meta {
+  font-size: 0.8125rem; /* 13px */
+  line-height: 18px;
+  color: var(--ink-muted);
 }
 
 .expense-amount {
+  align-self: start;
   font-weight: 700;
-  font-size: 1.0625rem;
-  font-variant-numeric: tabular-nums;
+  font-size: 1.0625rem; /* 17px */
+  line-height: 22px;
+  white-space: nowrap; /* the amount never wraps; the title gives way instead */
 }
 
-.badge {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px; /* fully rounded "pill" */
-  background: var(--badge-bg);
-  color: var(--badge-text);
-}
-
-.expense-date {
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.expense-note {
-  font-size: 0.9375rem;
-  overflow-wrap: anywhere; /* a very long word can't push the layout sideways */
-}
-
+/* Edit / Delete sit under the text, lined up on the right */
 .expense-actions {
+  grid-column: 2 / -1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 /* "Delete this?" text shown next to the Yes/Cancel buttons */
@@ -444,7 +541,7 @@ select {
 }
 
 /* =========================================================
-   8. Spending chart
+   9. Spending chart
    ========================================================= */
 .chart-card h2 {
   margin-bottom: 4px;
@@ -452,14 +549,15 @@ select {
 
 .chart-note,
 .card-note {
-  margin: 0 0 var(--gap);
+  margin: 0 0 var(--space-4);
   font-size: 0.875rem;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 .chart-subtitle {
-  margin: var(--gap) 0 8px;
+  margin: var(--space-5) 0 var(--space-2);
   font-size: 0.9375rem;
+  font-weight: 600;
 }
 
 #chart-content > .chart-subtitle:first-child {
@@ -468,28 +566,27 @@ select {
 
 .bar-chart {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* "Nov 2026 ............ ₱11,350.00" above each bar */
 .chart-row-label {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   font-size: 0.875rem;
   margin-bottom: 4px;
 }
 
 .chart-amount {
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
-/* The lane: full width, light grey. The bar inside it gets its width from app.js */
+/* The lane: full width, dark. The bar inside it gets its width from app.js */
 .bar-track {
-  height: 14px;
-  background: var(--track);
-  border-radius: 999px;
+  height: 12px;
+  background: var(--cone-track);
+  border-radius: var(--radius-pill);
   overflow: hidden; /* clips the bar's corners into the rounded lane */
 }
 
@@ -497,7 +594,7 @@ select {
   display: flex;    /* lets the colored pieces sit side by side and share the width */
   height: 100%;
   min-width: 6px;   /* even a tiny amount stays visible */
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 
@@ -517,10 +614,10 @@ select {
   flex-wrap: wrap;
   gap: 6px 14px;
   list-style: none;
-  margin: 12px 0 0;
+  margin: var(--space-3) 0 0;
   padding: 0;
   font-size: 0.8125rem;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 .legend-item {
@@ -536,7 +633,7 @@ select {
 }
 
 /* =========================================================
-   9. Backup (CSV export / import)
+   10. Backup (CSV export / import)
    ========================================================= */
 .backup-card h2 {
   margin-bottom: 4px;
@@ -545,66 +642,40 @@ select {
 .backup-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* The month picker above the Export/Import buttons: not wider than it needs to be */
 .export-month {
   max-width: 260px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .backup-status {
-  margin: 12px 0 0;
+  margin: var(--space-3) 0 0;
 }
 
 .backup-status:empty {
   display: none; /* no gap under the buttons until there's a message */
 }
 
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* =========================================================
-   10. Footer: offline status
-   ========================================================= */
-.app-footer {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0 var(--gap) var(--gap);
-}
-
-.offline-status {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--muted);
-  text-align: center;
-}
-
-.offline-status.ready {
-  color: var(--primary);
-  font-weight: 600;
-}
-
 /* The box that appears after picking a file to import */
 .import-preview {
-  margin-top: var(--gap);
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--ground);
 }
 
 .import-summary {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   overflow-wrap: anywhere; /* long file names wrap instead of widening the page */
 }
 
 /* Rows that couldn't be imported, e.g. "Row 4: amount is missing" */
 .import-problems {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   padding-left: 20px;
   font-size: 0.875rem;
   color: var(--danger);
@@ -613,4 +684,51 @@ select {
 
 .import-problems:empty {
   display: none;
+}
+
+/* =========================================================
+   11. Motto + footer
+   ========================================================= */
+/* Hand-sprayed on the wall: decoration, so it uses the faint ink */
+.motto {
+  margin: 14px auto 0;
+  padding: 0 var(--space-5);
+  max-width: 480px;
+  text-align: center;
+  font-family: var(--font-hand);
+  font-size: 22px;
+  line-height: 28px;
+  color: var(--ink-faint);
+  transform: rotate(-2deg);
+}
+
+.app-footer {
+  max-width: 480px;
+  margin: 0 auto;
+  /* Room for the home bar on phones without a button */
+  padding: var(--space-4) var(--space-5) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+}
+
+.offline-status {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+.offline-status.ready {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* =========================================================
+   12. Reduced motion: no press animation for people who turn motion off
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+  .btn:active:not(:disabled) {
+    transform: none;
+  }
 }

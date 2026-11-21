@@ -10,7 +10,7 @@
 // Must match the ?v= number on the style.css and app.js links in index.html.
 // Raise it whenever any app file changes: the browser sees sw.js changed, installs this new
 // version, and the old cache is deleted.
-const VERSION = 4;
+const VERSION = 5;
 const CACHE = `expense-tracker-v${VERSION}`;
 
 // Everything the app needs to open offline
@@ -60,7 +60,7 @@ self.addEventListener('fetch', (event) => {
     // The page itself (index.html): NETWORK FIRST, so you always get the newest version when online
     event.respondWith(networkFirst(request));
   } else {
-    // CSS, JS, images: CACHE FIRST. Safe because CSS/JS have a version in their address (?v=4),
+    // CSS, JS, images: CACHE FIRST. Safe because CSS/JS have a version in their address (?v=5),
     // so a new version is a NEW address that isn't in the cache yet.
     event.respondWith(cacheFirst(request));
   }

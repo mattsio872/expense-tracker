@@ -10,6 +10,7 @@ const submitBtn = document.getElementById('submit-btn');
 const cancelBtn = document.getElementById('cancel-btn');
 const list = document.getElementById('expense-list');
 const totalEl = document.getElementById('total');
+const totalCompare = document.getElementById('total-compare');
 const emptyMessage = document.getElementById('empty-message');
 const filtersBox = document.getElementById('filters');
 const filterMonth = document.getElementById('filter-month');
@@ -128,6 +129,15 @@ function formatPeso(amount) {
   return pesoFormatter.format(amount);
 }
 
+// Whole pesos, e.g. 2849.5 -> "₱2,850". Only for the big total on the lightbox;
+// everywhere else keeps the centavos.
+const wholePesoFormatter = new Intl.NumberFormat('en-PH', {
+  style: 'currency', currency: 'PHP', maximumFractionDigits: 0,
+});
+function formatWholePeso(amount) {
+  return wholePesoFormatter.format(amount);
+}
+
 // Turns "2026-11-21" into "Nov 21, 2026" for display (we still SAVE the YYYY-MM-DD form).
 // We build the date from its parts because new Date("2026-11-21") is read as UTC
 // midnight, which can show the wrong day in some time zones.
@@ -147,6 +157,19 @@ function monthOf(expense) {
 function formatMonth(monthKey) {
   const [year, month] = monthKey.split('-').map(Number);
   return new Date(year, month - 1, 1).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' });
+}
+
+// The month before, e.g. "2026-01" -> "2025-12". Built from parts (local time), like the dates above.
+function previousMonth(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number);
+  const date = new Date(year, month - 2, 1); // month - 1 is this month (0-based), so - 2 is last month
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// "2026-10" -> "October"
+function monthName(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString('en-PH', { month: 'long' });
 }
 
 // "1 expense" / "3 expenses"
@@ -258,23 +281,32 @@ function renderList() {
   for (const expense of visible) {
     // Each row is built from small pieces with their own CSS classes:
     //   <li class="expense">
-    //     <div class="expense-info"> amount, category badge, date, note </div>
+    //     <span class="expense-dot">            (the category's color)
+    //     <div class="expense-info"> title (the note, or the category), meta (category · date) </div>
+    //     <span class="expense-amount">
     //     <div class="expense-actions"> Edit, Delete </div>
     //   </li>
     const item = makeElement('li', 'expense', '');
 
+    const dot = makeElement('span', 'expense-dot', '');
+    dot.style.background = categoryColor(expense.category);
+
+    // With a note: the note is the title, the category goes on the line under it.
+    // Without one: the category is the title. The date is always on the second line.
+    // textContent (inside makeElement) shows the note exactly as typed,
+    // so a note like "<b>hi</b>" can't turn into real HTML.
     const info = makeElement('div', 'expense-info', '');
-    const top = makeElement('div', 'expense-top', '');
-    top.append(
-      makeElement('span', 'expense-amount', formatPeso(expense.amount)),
-      makeElement('span', 'badge', expense.category)
+    const meta = expense.note
+      ? `${expense.category} · ${formatDate(expense.date)}`
+      : formatDate(expense.date);
+    info.append(
+      makeElement('div', 'expense-title', expense.note || expense.category),
+      makeElement('div', 'expense-meta', meta)
     );
-    info.append(top, makeElement('div', 'expense-date', formatDate(expense.date)));
-    if (expense.note) {
-      // textContent (inside makeElement) shows the note exactly as typed,
-      // so a note like "<b>hi</b>" can't turn into real HTML.
-      info.append(makeElement('div', 'expense-note', expense.note));
-    }
+    // The full note shows when you hold a mouse over a cut-off title
+    if (expense.note) info.firstChild.title = expense.note;
+
+    const amount = makeElement('span', 'expense-amount', formatPeso(expense.amount));
 
     const actions = makeElement('div', 'expense-actions', '');
     if (expense.id === confirmingDeleteId) {
@@ -291,13 +323,11 @@ function renderList() {
       );
     }
 
-    item.append(info, actions);
+    item.append(dot, info, amount, actions);
     list.appendChild(item);
   }
 
-  // Total: reduce() walks the array and adds each amount to a running sum (starting at 0)
-  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
-  totalEl.textContent = formatPeso(total); // the header always shows the ALL-TIME total
+  renderLightbox();
 
   // No expenses at all: hide the filters, they'd have nothing to filter
   filtersBox.hidden = expenses.length === 0;
@@ -329,12 +359,51 @@ function renderList() {
   exportBtn.disabled = expenses.length === 0;
 }
 
+// ===== 5a. The lightbox: this calendar month's total =====
+// It always shows the CURRENT month (the list filters don't change it).
+// Under the total: how it compares with last month, if last month has any expenses.
+function renderLightbox() {
+  const thisMonth = todayString().slice(0, 7);
+  const lastMonth = previousMonth(thisMonth);
+  const sumOf = (month) => expenses.filter((e) => monthOf(e) === month).reduce((sum, e) => sum + e.amount, 0);
+
+  const spent = sumOf(thisMonth);
+  totalEl.textContent = formatWholePeso(spent);
+  fitTotal();
+
+  const before = sumOf(lastMonth);
+  if (before === 0) {
+    totalCompare.hidden = true; // nothing to compare with
+    return;
+  }
+  // Compare in whole pesos, so "₱0 more" can't happen
+  const difference = Math.round(spent) - Math.round(before);
+  const name = monthName(lastMonth);
+  if (difference > 0) totalCompare.textContent = `${formatWholePeso(difference)} more than ${name}`;
+  else if (difference < 0) totalCompare.textContent = `${formatWholePeso(-difference)} less than ${name}`;
+  else totalCompare.textContent = `Same as ${name}`;
+  totalCompare.hidden = false;
+}
+
+// A huge total (₱1,250,000) must still fit on the lightbox: if it's wider than the box,
+// step the font down 72 -> 56 -> 44px. Measured after the text is set.
+function fitTotal() {
+  const box = totalEl.parentElement;
+  for (const size of ['', 'is-medium', 'is-small']) {
+    box.classList.remove('is-medium', 'is-small');
+    if (size) box.classList.add(size);
+    if (box.scrollWidth <= box.clientWidth) return;
+  }
+}
+
 // ===== 5b. Render the chart: bars are just <div>s with a width in % =====
 
 // Each category's color lives in style.css as a variable, e.g. --cat-food.
-// This turns "Food" into "var(--cat-food)". Unknown categories fall back to the "Other" color.
+// This turns "Food" into "var(--cat-food)" and "Nights out" into "var(--cat-nights-out)"
+// (spaces become dashes, because a CSS name can't contain a space).
+// Unknown categories fall back to the "Other" color.
 function categoryColor(category) {
-  return `var(--cat-${category.toLowerCase()}, var(--cat-other))`;
+  return `var(--cat-${category.toLowerCase().replace(/\s+/g, '-')}, var(--cat-other))`;
 }
 
 // Categories in the same order as the form's dropdown, so colors always appear in the same order
@@ -956,3 +1025,8 @@ if ('serviceWorker' in navigator) {
 fillCategoryFilter();
 resetForm(); // start in "add mode" with today's date
 renderList();
+
+// Outfit is a bit wider than the phone's own font, so measure the big total again once it has
+// loaded (and when the phone is turned), in case it now needs a smaller size.
+document.fonts?.ready.then(fitTotal);
+window.addEventListener('resize', fitTotal);
