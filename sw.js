@@ -10,7 +10,7 @@
 // Must match the ?v= number on the style.css and app.js links in index.html.
 // Raise it whenever any app file changes: the browser sees sw.js changed, installs this new
 // version, and the old cache is deleted.
-const VERSION = 3;
+const VERSION = 4;
 const CACHE = `expense-tracker-v${VERSION}`;
 
 // Everything the app needs to open offline
@@ -60,7 +60,7 @@ self.addEventListener('fetch', (event) => {
     // The page itself (index.html): NETWORK FIRST, so you always get the newest version when online
     event.respondWith(networkFirst(request));
   } else {
-    // CSS, JS, images: CACHE FIRST. Safe because CSS/JS have a version in their address (?v=3),
+    // CSS, JS, images: CACHE FIRST. Safe because CSS/JS have a version in their address (?v=4),
     // so a new version is a NEW address that isn't in the cache yet.
     event.respondWith(cacheFirst(request));
   }
@@ -71,7 +71,14 @@ async function networkFirst(request) {
   const cache = await caches.open(CACHE);
   try {
     // cache: 'no-cache' = ask the server for the newest page, even if the browser has one saved
-    const response = await fetch(request.url, { cache: 'no-cache' });
+    let response = await fetch(request.url, { cache: 'no-cache' });
+    // If the address was redirected (e.g. ".../expense-tracker" -> ".../expense-tracker/"),
+    // Safari refuses a page a service worker hands over "after a redirect". Give it a clean copy.
+    if (response.redirected) {
+      response = new Response(await response.blob(), {
+        status: response.status, statusText: response.statusText, headers: response.headers,
+      });
+    }
     if (response.ok) await cache.put('./', response.clone()); // keep the newest page for offline use
     return response;
   } catch (error) {

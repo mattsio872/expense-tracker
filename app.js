@@ -912,10 +912,45 @@ importCancelBtn.addEventListener('click', closeImportPreview);
 // Register the service worker (sw.js), which saves the app's files so it opens offline.
 // Older browsers without service workers simply skip this; the app still works online.
 // It fails when you open index.html by double-clicking (file://), which is fine: it needs a web address.
+
+const offlineStatus = document.getElementById('offline-status');
+
+// Shows at the bottom of the page whether offline use is ready, so you can check on a phone
+// (where there are no developer tools). "Ready" means BOTH: the service worker is in charge
+// of this page, AND a saved copy of the page is in its cache.
+async function showOfflineStatus() {
+  let ready = false;
+  try {
+    ready = Boolean(navigator.serviceWorker.controller) && Boolean(await caches.match('./'));
+  } catch (error) {
+    ready = false; // caches can be unavailable (e.g. some private modes)
+  }
+  offlineStatus.classList.toggle('ready', ready);
+  if (ready && !navigator.onLine) {
+    offlineStatus.textContent = '✓ Offline: using the saved app';
+  } else if (ready) {
+    offlineStatus.textContent = '✓ Ready to use offline';
+  } else {
+    offlineStatus.textContent = 'Getting ready for offline use… keep the app open with internet for a few seconds.';
+  }
+}
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch((error) => {
-    console.warn('Offline support not available here:', error.message);
-  });
+  showOfflineStatus();
+  navigator.serviceWorker.register('sw.js')
+    .then(() => navigator.serviceWorker.ready) // waits until it's installed (files saved) and active
+    .then(showOfflineStatus)
+    .catch((error) => {
+      console.warn('Offline support not available here:', error.message);
+      offlineStatus.textContent = 'Offline use is not available when the app is opened this way.';
+    });
+  // The worker takes charge of the page a moment after the first visit: check again then
+  navigator.serviceWorker.addEventListener('controllerchange', showOfflineStatus);
+  // Update the message when the internet goes away or comes back
+  window.addEventListener('online', showOfflineStatus);
+  window.addEventListener('offline', showOfflineStatus);
+} else {
+  offlineStatus.textContent = 'This browser can\'t save the app for offline use.';
 }
 
 fillCategoryFilter();

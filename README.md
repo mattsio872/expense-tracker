@@ -55,6 +55,8 @@ The live version at **https://mattsio872.github.io/expense-tracker/** is served 
 - `sw.js` is a **service worker**: it saves the app's files so it opens with no internet. The page is fetched **network-first** (newest version when online, saved copy when offline); CSS, JS and images are **cache-first** (they have version numbers, so a new version is a new address).
 - **How updates reach your phone:** the next time you open the app online, it gets the new page straight from the internet, and the new page asks for the new `?v=` files, which are downloaded and saved. The browser also notices `sw.js` changed, installs the new version, and deletes the old saved files. If the app was already open, pull down to refresh (or close and reopen it).
 - Offline mode does **not** need a server: your expenses are still in localStorage on the device.
+- **Check it's ready:** the bottom of the page says **"✓ Ready to use offline"** once the files are saved (or "✓ Offline: using the saved app" when there's no internet). Open the app once with internet and wait for that message before relying on it offline.
+- Use the address **with the final slash**: `https://mattsio872.github.io/expense-tracker/`. Without it (`…/expense-tracker`) the page is redirected and sits outside the service worker's area, so it won't open offline.
 
 ## Files
 

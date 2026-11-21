@@ -18,11 +18,11 @@
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Expenses">
-  <!-- "?v=3" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+  <!-- "?v=4" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
        style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
        AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
        instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <header class="app-header">
@@ -177,7 +177,12 @@
     </section>
   </main>
 
+  <!-- Shows whether the app is saved for offline use, e.g. "✓ Ready to use offline" -->
+  <footer class="app-footer">
+    <p id="offline-status" class="offline-status" aria-live="polite"></p>
+  </footer>
+
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=3" defer></script>
+  <script src="app.js?v=4" defer></script>
 </body>
 </html>

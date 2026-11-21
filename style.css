@@ -567,6 +567,27 @@ select {
   cursor: not-allowed;
 }
 
+/* =========================================================
+   10. Footer: offline status
+   ========================================================= */
+.app-footer {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 var(--gap) var(--gap);
+}
+
+.offline-status {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.offline-status.ready {
+  color: var(--primary);
+  font-weight: 600;
+}
+
 /* The box that appears after picking a file to import */
 .import-preview {
   margin-top: var(--gap);
