@@ -8,6 +8,16 @@
   <!-- Lets the browser use dark versions of form controls in dark mode -->
   <meta name="color-scheme" content="light dark">
   <title>Matt's Expense Tracker</title>
+
+  <!-- PWA: the manifest tells phones this page can be installed as an app (name, icon, colors) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <!-- Colors the phone's status bar / browser bar to match the app -->
+  <meta name="theme-color" content="#1f6f5c">
+  <!-- Browser tab icon (also stops the "favicon.ico not found" error) -->
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+  <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
+  <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Expenses">
   <!-- "?v=2" is a version number. Browsers keep a saved copy of style.css and app.js for a while,
        so after changing either file, add 1 here AND on the app.js link below. The new number makes
        the browser treat it as a new file and download it, instead of mixing new HTML with old CSS/JS. -->
