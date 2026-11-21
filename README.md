@@ -1,4 +1,4 @@
-# Expense Tracker (₱)
+# Matt's Expense Tracker (₱)
 
 A small expense tracker that runs entirely in your browser. You can add, edit and delete expenses in Philippine pesos. Everything is saved on your own device, so there's no account, no server, and no internet needed.
 
@@ -8,10 +8,27 @@ Built step by step as a learning project for working with AI coding agents.
 
 ## Features
 
+**Expenses**
 - Add an expense with an **amount (₱)**, **category**, **date**, and an optional **note** (up to 200 characters, with a counter).
-- Expenses are listed **newest first**, with the **total spent** at the top.
-- **Edit** an expense in place, or **delete** it (you'll be asked to confirm).
-- Data is **saved automatically** and survives a page refresh.
+- Expenses are listed **newest first**, with the all-time **total spent** at the top.
+- **Edit** an expense in place, or **delete** it (the row asks "Delete this?" before anything is removed).
+
+**Filters and totals**
+- **Filter by month and category**. Your choice is remembered next time.
+- The **total of the expenses shown** appears beside the "Expenses" heading, with a count like "Showing 2 of 5 expenses".
+
+**Spending chart**
+- **By month**: one bar per month, split into colored pieces by category, with a color legend.
+- **By category**: one bar per category with its amount and share of the total (e.g. ₱10,000.00 · 59%).
+
+**Backup (CSV)**
+- **Export** all expenses, or a **single month**, to a CSV file that opens in Excel or Google Sheets.
+- **Import** a CSV to restore a backup or add expenses from a spreadsheet. Every row is checked first, and a preview lets you **add only new ones** or **replace all**.
+
+**App**
+- **Installable** on phones and computers, with its own icon and window (a PWA).
+- **Works offline**: once opened online, the app loads with no internet.
+- Data is **saved automatically** on your device and survives a page refresh. No account, no server.
 - **Mobile-friendly**: one column on phones, two columns on wider screens.
 - **Dark mode** follows your device setting.
 
