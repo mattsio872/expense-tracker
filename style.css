@@ -945,6 +945,18 @@ button.cone:active {
   border-color: var(--danger);
 }
 
+/* "Last backup: Nov 2 (20 days ago)" in the settings sheet; gold when a backup is overdue */
+.backup-last {
+  margin: 0 0 var(--space-4);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.backup-last.overdue {
+  color: var(--gold);
+}
+
 .export-month label {
   display: block;
   margin-bottom: var(--space-2);
@@ -1021,6 +1033,15 @@ button.cone:active {
   /* 120px of room at the bottom, so the last things on the page can scroll above the
      floating Add expense button (plus the home bar on phones without a button) */
   padding: var(--space-4) var(--space-5) calc(120px + env(safe-area-inset-bottom, 0px));
+}
+
+/* "Last backup 34 days ago · 12 new expenses": gold, so it's noticed, but small and calm */
+.backup-reminder {
+  margin: 0 0 2px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--gold);
 }
 
 /* "Backup & settings": a quiet, underlined text button, still finger-sized */

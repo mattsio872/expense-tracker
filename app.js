@@ -29,6 +29,8 @@ const settingsClose = document.getElementById('settings-close');
 const budgetInput = document.getElementById('budget');
 const budgetField = document.getElementById('budget-field');
 const budgetError = document.getElementById('budget-error');
+const backupReminder = document.getElementById('backup-reminder');
+const backupLast = document.getElementById('backup-last');
 const list = document.getElementById('expense-list');
 const totalEl = document.getElementById('total');
 const totalCompare = document.getElementById('total-compare');
@@ -126,6 +128,40 @@ function saveFilters(value) {
     localStorage.setItem(FILTERS_KEY, JSON.stringify(value));
   } catch (error) {
     // ignore: not being able to remember a filter isn't worth an alert
+  }
+}
+
+// When "All months" was last exported (a full backup), as milliseconds since 1970. null = never.
+const LAST_BACKUP_KEY = 'lastBackup';
+
+function loadLastBackup() {
+  try {
+    const value = Number(localStorage.getItem(LAST_BACKUP_KEY));
+    return value > 0 ? value : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveLastBackup(time) {
+  try {
+    localStorage.setItem(LAST_BACKUP_KEY, String(time));
+  } catch (error) {
+    // not being able to remember this only means the reminder may show again
+  }
+}
+
+// Asks the browser to keep this app's storage even when the phone runs low on space.
+// Without it, a browser may clear "unimportant" site data, and your expenses with it.
+// Some browsers grant it straight away (often for installed apps), some decide by how much
+// you use the app, some don't support it; in every case the app works the same.
+async function askToKeepStorage() {
+  try {
+    if (navigator.storage?.persist && !(await navigator.storage.persisted())) {
+      await navigator.storage.persist();
+    }
+  } catch (error) {
+    // not supported here: nothing to do
   }
 }
 
@@ -392,6 +428,9 @@ function renderList() {
 
   // Nothing to export yet? Grey out the button.
   exportBtn.disabled = expenses.length === 0;
+
+  // Adding, deleting or importing can change whether a backup is overdue
+  renderBackupStatus();
 }
 
 // One expense row. The whole row is one button: tap it to edit (or delete) in the sheet.
@@ -699,6 +738,73 @@ function exportCsv() {
 
   const which = month === 'all' ? 'all months' : formatMonth(month);
   backupStatus.textContent = `Exported ${countLabel(toExport.length)} (${which}) to ${fileName}.`;
+
+  // Only a full export counts as a backup (one month alone wouldn't bring everything back)
+  if (month === 'all') {
+    saveLastBackup(Date.now());
+    renderBackupStatus();
+  }
+}
+
+// ===== 5e. Backup reminder =====
+// A backup is "overdue" when there are expenses the last full export doesn't have, and it's
+// been 14 days or more: since that export, or (never backed up) since the first expense.
+// An expense's id starts with the time it was created (see makeId), which tells us which
+// expenses are newer than the backup.
+const BACKUP_REMINDER_DAYS = 14;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function createdTime(expense) {
+  const time = parseInt(expense.id, 10);
+  return Number.isFinite(time) && time > 0 ? time : null; // ids from some imports aren't times
+}
+
+// "today", "yesterday", "5 days ago"
+function daysAgoText(time) {
+  const days = Math.floor((Date.now() - time) / DAY_MS);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  return `${days} days ago`;
+}
+
+function backupState() {
+  const last = loadLastBackup();
+  // Expenses the last backup doesn't have (all of them if there's never been one)
+  const unsaved = expenses.filter((e) => {
+    const time = createdTime(e);
+    return last === null || (time !== null && time > last);
+  }).length;
+  // Since when: the last backup, or else the oldest expense
+  const times = expenses.map(createdTime).filter((t) => t !== null);
+  const since = last ?? (times.length ? Math.min(...times) : Date.now());
+  const overdue = unsaved > 0 && Date.now() - since >= BACKUP_REMINDER_DAYS * DAY_MS;
+  return { last, unsaved, overdue };
+}
+
+// Draws both places that talk about backups: the reminder above "Backup & settings"
+// (only when overdue) and the "Last backup" line in the settings sheet (always)
+function renderBackupStatus() {
+  const { last, unsaved, overdue } = backupState();
+
+  backupReminder.hidden = !overdue;
+  if (overdue) {
+    const newOnes = unsaved === 1 ? '1 new expense' : `${unsaved} new expenses`;
+    backupReminder.textContent = last === null
+      ? `Not backed up yet · ${countLabel(expenses.length)}`
+      : `Last backup ${daysAgoText(last)} · ${newOnes}`;
+  }
+
+  if (last === null) {
+    backupLastLine('Not backed up yet', overdue);
+  } else {
+    const date = new Date(last).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    backupLastLine(`Last backup: ${date} (${daysAgoText(last)})`, overdue);
+  }
+}
+
+function backupLastLine(text, overdue) {
+  backupLast.textContent = text;
+  backupLast.classList.toggle('overdue', overdue);
 }
 
 // ===== 5d. Backup: import from a CSV file =====
@@ -1682,6 +1788,7 @@ buildCategoryChips();
 setupSheet(sheet);
 setupSheet(settingsSheet);
 setupSwipeToDelete();
+askToKeepStorage();
 renderList();
 
 // Outfit is a bit wider than the phone's own font, so measure the big total again once it has

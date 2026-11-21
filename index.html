@@ -26,11 +26,11 @@
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Expenses">
-  <!-- "?v=11" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+  <!-- "?v=12" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
        style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
        AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
        instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
   <header class="app-header">
@@ -99,6 +99,8 @@
 
   <!-- Shows whether the app is saved for offline use, e.g. "✓ Ready to use offline" -->
   <footer class="app-footer">
+    <!-- "Last backup 34 days ago · 12 new expenses": only when a backup is overdue -->
+    <p id="backup-reminder" class="backup-reminder" hidden></p>
     <!-- Opens the settings sheet (monthly budget + CSV backup) -->
     <button type="button" id="settings-btn" class="settings-link">Backup &amp; settings</button>
     <p id="offline-status" class="offline-status" aria-live="polite"></p>
@@ -240,7 +242,10 @@
         <!-- Backup: save all expenses to a CSV file, or load them back from one -->
         <section class="settings-section" aria-labelledby="backup-title">
           <h3 id="backup-title" class="settings-heading">Backup</h3>
-          <p class="settings-note">Save all your expenses as a CSV file (opens in Excel or Google Sheets), or load them back from one.</p>
+          <p class="settings-note">Save all your expenses as a CSV file (opens in Excel or Google Sheets), or load them back from one.
+            Your expenses are only stored on this phone, so export "All months" now and then and keep the file somewhere safe.</p>
+          <!-- "Last backup: Nov 2 (20 days ago)" or "Not backed up yet" -->
+          <p id="backup-last" class="backup-last"></p>
           <!-- Which month to export. app.js fills in the months that have expenses. -->
           <div class="field export-month">
             <label for="export-month">Month to export</label>
@@ -279,6 +284,6 @@
   </div>
 
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=11" defer></script>
+  <script src="app.js?v=12" defer></script>
 </body>
 </html>
