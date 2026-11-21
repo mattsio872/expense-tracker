@@ -106,9 +106,11 @@ In your browser's **localStorage**, under the key `expenses`, for the address yo
 
 Good practice exercises, roughly from easiest to hardest:
 
-- Filter the list by category or by month.
-- Show a total per category.
-- Export expenses to a CSV file (opens in Excel or Google Sheets).
-- Import from CSV, to restore a backup.
-- A simple chart of spending by category.
-- Sync across devices (needs a backend server and a database).
+- [x] Filter the list by category or by month.
+- [x] Show a total per category. *(The filtered total beside "Expenses", and the chart's "By category" breakdown.)*
+- [x] Export expenses to a CSV file (opens in Excel or Google Sheets). *(Also by single month.)*
+- [x] Import from CSV, to restore a backup.
+- [x] A simple chart of spending by category. *(By month, split by category, plus by category.)*
+- [ ] Sync across devices (needs a backend server and a database).
+
+Also done along the way: installable app with offline support (PWA).
