@@ -1,13 +1,24 @@
 // ===== 1. Find the HTML elements we need (using their id "name tags") =====
+const sheet = document.getElementById('expense-sheet');
+const sheetTitle = document.getElementById('sheet-title');
+const sheetClose = document.getElementById('sheet-close');
 const form = document.getElementById('expense-form');
-const formTitle = document.getElementById('form-title');
+const amountField = document.getElementById('amount-field');
 const amountInput = document.getElementById('amount');
-const categoryInput = document.getElementById('category');
+const amountError = document.getElementById('amount-error');
+const categoryChips = document.getElementById('category-chips');
 const dateInput = document.getElementById('date');
 const noteInput = document.getElementById('note');
 const noteCount = document.getElementById('note-count');
 const submitBtn = document.getElementById('submit-btn');
-const cancelBtn = document.getElementById('cancel-btn');
+const deleteArea = document.getElementById('delete-area');
+const deleteBtn = document.getElementById('delete-btn');
+const deleteConfirm = document.getElementById('delete-confirm');
+const deleteYes = document.getElementById('delete-yes');
+const deleteNo = document.getElementById('delete-no');
+const toast = document.getElementById('toast');
+const toastText = document.getElementById('toast-text');
+const toastUndo = document.getElementById('toast-undo');
 const list = document.getElementById('expense-list');
 const totalEl = document.getElementById('total');
 const totalCompare = document.getElementById('total-compare');
@@ -20,7 +31,6 @@ const filterText = document.getElementById('filter-text');
 const filterClear = document.getElementById('filter-clear');
 const speakerPanel = document.getElementById('speaker-panel');
 const cones = document.getElementById('cones');
-const formCard = document.getElementById('form-card');
 const addBtn = document.getElementById('add-btn');
 const exportMonth = document.getElementById('export-month');
 const exportBtn = document.getElementById('export-btn');
@@ -34,7 +44,14 @@ const importMergeBtn = document.getElementById('import-merge');
 const importReplaceBtn = document.getElementById('import-replace');
 const importCancelBtn = document.getElementById('import-cancel');
 
-// ===== 2. Storage: save and load with localStorage =====
+// ===== 2. The categories: the ONE list (the chips, the cones and CSV import all use it) =====
+// Each one needs a color in style.css: "--cat-" + the name in lowercase, spaces -> "-".
+const CATEGORIES = ['Food', 'Transport', 'Bills', 'Shopping', 'Health', 'Nights out', 'School', 'Other'];
+
+// Old names that were renamed. Saved expenses, saved filters and imported CSVs are updated.
+const RENAMED_CATEGORIES = { Entertainment: 'Nights out' };
+
+// ===== 2b. Storage: save and load with localStorage =====
 // localStorage is a small storage area in the browser. It only stores TEXT,
 // so we turn our array into JSON text to save it, and back into an array to load it.
 const STORAGE_KEY = 'expenses';
@@ -44,7 +61,18 @@ function loadExpenses() {
     const text = localStorage.getItem(STORAGE_KEY); // null if nothing saved yet
     const data = JSON.parse(text);
     // Only trust it if it really is an array. Otherwise start fresh.
-    return Array.isArray(data) ? data : [];
+    if (!Array.isArray(data)) return [];
+
+    // One-time update: "Entertainment" is now "Nights out". Rename, then save once.
+    let renamed = false;
+    for (const expense of data) {
+      if (RENAMED_CATEGORIES[expense.category]) {
+        expense.category = RENAMED_CATEGORIES[expense.category];
+        renamed = true;
+      }
+    }
+    if (renamed) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return data;
   } catch (error) {
     // Broken JSON, or storage blocked (e.g. some private windows):
     // don't crash, just start with an empty list.
@@ -57,7 +85,8 @@ function saveExpenses(list) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   } catch (error) {
-    alert('Could not save your expenses in this browser.');
+    // A toast instead of alert(): some in-app browsers block alert(), and it stops everything
+    showToast("Can't save on this browser");
     console.warn('Could not save expenses:', error);
   }
 }
@@ -73,6 +102,7 @@ function loadFilters() {
   try {
     const data = JSON.parse(localStorage.getItem(FILTERS_KEY));
     if (data && typeof data.month === 'string' && typeof data.category === 'string') {
+      data.category = RENAMED_CATEGORIES[data.category] || data.category;
       return data;
     }
   } catch (error) {
@@ -94,13 +124,8 @@ function saveFilters(value) {
 // We start with whatever was saved last time.
 let expenses = loadExpenses();
 
-// Which expense is being edited right now. null = we're adding a new one.
+// Which expense the sheet is editing right now. null = it's adding a new one (or closed).
 let editingId = null;
-
-// Which expense is showing "Delete this? [Yes, delete] [Cancel]" right now. null = none.
-// We ask inside the row instead of using confirm(), because some browsers (in-app browsers,
-// or after "prevent this page from creating dialogs") block confirm() and it silently answers "Cancel".
-let confirmingDeleteId = null;
 
 // What the screen shows. month looks like "2026-11" (the first 7 characters of a date),
 // category like "Food" ("all" = every category).
@@ -137,16 +162,6 @@ const wholePesoFormatter = new Intl.NumberFormat('en-PH', {
 });
 function formatWholePeso(amount) {
   return wholePesoFormatter.format(amount);
-}
-
-// Turns "2026-11-21" into "Nov 21, 2026" for display (we still SAVE the YYYY-MM-DD form).
-// We build the date from its parts because new Date("2026-11-21") is read as UTC
-// midnight, which can show the wrong day in some time zones.
-function formatDate(dateString) {
-  const [year, month, day] = dateString.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-PH', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  });
 }
 
 // "2026-11-21" -> "2026-11". Because dates are YYYY-MM-DD, the month is just the first 7 characters.
@@ -270,16 +285,6 @@ function formatMonthShort(monthKey) {
   return new Date(year, month - 1, 1).toLocaleDateString('en-PH', { month: 'short' });
 }
 
-// Shows "45 / 200" under the note, so the limit is never a surprise.
-// noteInput.maxLength reads the maxlength="200" from the HTML, so the number lives in one place.
-function updateNoteCount() {
-  const used = noteInput.value.length;
-  const max = noteInput.maxLength;
-  noteCount.textContent = `${used} / ${max}`;
-  // Add the "near-limit" class when 20 or fewer characters are left (CSS turns it red)
-  noteCount.classList.toggle('near-limit', max - used <= 20);
-}
-
 // Creates an element with a CSS class and text in one line.
 // It uses textContent, so user text can never become HTML.
 function makeElement(tag, className, text) {
@@ -287,20 +292,6 @@ function makeElement(tag, className, text) {
   element.className = className;
   element.textContent = text;
   return element;
-}
-
-// Builds one row button. data-action says WHAT it does, data-id says WHICH expense.
-// extraClass is optional: e.g. 'btn-danger' makes the button red.
-function makeRowButton(label, action, expense, extraClass = '') {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = `btn btn-small ${extraClass}`;
-  button.textContent = label;
-  button.dataset.action = action;   // becomes data-action="edit" / "delete" / ...
-  button.dataset.id = expense.id;   // becomes data-id="1795...-ab12"
-  button.setAttribute('aria-label',
-    `${label}: ${expense.category} expense of ${formatPeso(expense.amount)} on ${formatDate(expense.date)}`);
-  return button;
 }
 
 // ===== 5. Render: draw the expenses array onto the page =====
@@ -367,15 +358,20 @@ function renderList() {
   exportBtn.disabled = expenses.length === 0;
 }
 
-// One expense row:
+// One expense row. The whole row is one button: tap it to edit (or delete) in the sheet.
 //   <li class="expense">
-//     <span class="expense-dot">            (the category's color)
-//     <div class="expense-info"> title (the note, or the category), and the category under a note </div>
-//     <span class="expense-amount">
-//     <div class="expense-actions"> Edit, Delete </div>
+//     <button class="expense-button" data-id="...">
+//       <span class="expense-dot">            (the category's color)
+//       <span class="expense-info"> title (the note, or the category), and the category under a note </span>
+//       <span class="expense-amount">
+//     </button>
 //   </li>
 function makeExpenseRow(expense) {
   const item = makeElement('li', 'expense', '');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'expense-button';
+  button.dataset.id = expense.id;
 
   const dot = makeElement('span', 'expense-dot', '');
   dot.style.background = categoryColor(expense.category);
@@ -384,32 +380,22 @@ function makeExpenseRow(expense) {
   // Without one: the category is the title, and there's no second line (the day header has the date).
   // textContent (inside makeElement) shows the note exactly as typed,
   // so a note like "<b>hi</b>" can't turn into real HTML.
-  const info = makeElement('div', 'expense-info', '');
-  const title = makeElement('div', 'expense-title', expense.note || expense.category);
-  info.append(title);
-  if (expense.note) {
-    title.title = expense.note; // the full note shows when you hold a mouse over a cut-off title
-    info.append(makeElement('div', 'expense-meta', expense.category));
-  }
+  const info = makeElement('span', 'expense-info', '');
+  info.append(makeElement('span', 'expense-title', expense.note || expense.category));
+  if (expense.note) info.append(makeElement('span', 'expense-meta', expense.category));
 
   const amount = makeElement('span', 'expense-amount', formatPeso(expense.amount));
 
-  const actions = makeElement('div', 'expense-actions', '');
-  if (expense.id === confirmingDeleteId) {
-    // This row is asking "are you sure?"
-    actions.append(
-      makeElement('span', 'confirm-text', 'Delete this?'),
-      makeRowButton('Yes, delete', 'confirm-delete', expense, 'btn-danger-solid'),
-      makeRowButton('Cancel', 'cancel-delete', expense)
-    );
-  } else {
-    actions.append(
-      makeRowButton('Edit', 'edit', expense),
-      makeRowButton('Delete', 'delete', expense, 'btn-danger')
-    );
-  }
+  // What a screen reader says for the row: "Food, ₱185.00, Jollibee lunch, today. Edit"
+  const day = dayLabel(expense.date);
+  const when = day === 'Today' || day === 'Yesterday' ? day.toLowerCase() : day;
+  const parts = [expense.category, formatPeso(expense.amount)];
+  if (expense.note) parts.push(expense.note);
+  parts.push(when);
+  button.setAttribute('aria-label', `${parts.join(', ')}. Edit`);
 
-  item.append(dot, info, amount, actions);
+  button.append(dot, info, amount);
+  item.append(button);
   return item;
 }
 
@@ -461,9 +447,9 @@ function categoryColor(category) {
   return `var(--cat-${category.toLowerCase().replace(/\s+/g, '-')}, var(--cat-other))`;
 }
 
-// Categories in the same order as the form's dropdown
+// The categories in their usual order (the order of the chips)
 function categoryOrder() {
-  return [...categoryInput.options].map((option) => option.value);
+  return CATEGORIES;
 }
 
 // Adds up amounts into groups. Example: sumBy(expenses, (e) => e.category)
@@ -738,7 +724,12 @@ async function readImportFile(file) {
     if (amount === null) { problems.push(`Row ${rowNumber}: "${cell('amount')}" is not a valid amount.`); return; }
 
     // Match the category ignoring upper/lower case; unknown ones go under "Other"
-    let category = categories.find((c) => c.toLowerCase() === cell('category').trim().toLowerCase());
+    // Old backups say "Entertainment": use its new name first, so it isn't filed under Other
+    let wanted = cell('category').trim().toLowerCase();
+    for (const [oldName, newName] of Object.entries(RENAMED_CATEGORIES)) {
+      if (wanted === oldName.toLowerCase()) wanted = newName.toLowerCase();
+    }
+    let category = categories.find((c) => c.toLowerCase() === wanted);
     if (!category) { category = 'Other'; otherCount++; }
 
     // Undo the export's formula protection ('=... -> =...), tidy up, and respect the 200-character limit
@@ -834,10 +825,6 @@ function applyImport(mode) {
     message = `Replaced your expenses with the ${countLabel(items.length)} from the file.`;
   }
 
-  // Leave edit mode / any open "Delete this?" in case those expenses changed
-  confirmingDeleteId = null;
-  if (editingId) resetForm();
-
   saveExpenses(expenses); // same pattern as always: change, save, redraw
   renderList();
   closeImportPreview();
@@ -859,62 +846,160 @@ function updateExpense(id, changes) {
   renderList();
 }
 
-// Step 1 of deleting: switch that row to "Delete this? [Yes, delete] [Cancel]"
-function askToDelete(id) {
-  confirmingDeleteId = id;
-  renderList();
-  // Put keyboard focus on Cancel (the safe choice), so pressing Enter by accident deletes nothing
-  list.querySelector(`button[data-action="cancel-delete"][data-id="${id}"]`)?.focus();
-}
+// The expense deleted most recently, so the toast's Undo can bring it back. null = nothing to undo.
+let lastDeleted = null;
 
-function cancelDelete() {
-  confirmingDeleteId = null;
-  renderList();
-}
-
-// Step 2: really delete (only reached from the "Yes, delete" button)
 function deleteExpense(id) {
-  confirmingDeleteId = null;
-
-  // If we were editing this one, leave edit mode first
-  if (editingId === id) resetForm();
-
+  lastDeleted = expenses.find((e) => e.id === id) || null;
   // filter() makes a NEW array that keeps every expense EXCEPT this one
   expenses = expenses.filter((e) => e.id !== id);
   saveExpenses(expenses);
   renderList();
 }
 
-// Switch the form into "edit mode" and fill it with the expense's values
-function startEdit(id) {
-  const expense = expenses.find((e) => e.id === id);
-  if (!expense) return;
-
-  editingId = id;
-  amountInput.value = expense.amount;
-  categoryInput.value = expense.category;
-  dateInput.value = expense.date;
-  noteInput.value = expense.note;
-  updateNoteCount();
-
-  formTitle.textContent = 'Edit expense';
-  submitBtn.textContent = 'Save changes';
-  cancelBtn.hidden = false;
-
-  form.scrollIntoView({ behavior: 'smooth' }); // on phones the form may be off-screen
-  amountInput.focus();
+function undoDelete() {
+  if (!lastDeleted) return;
+  // Only put it back if it isn't there already (e.g. Undo tapped twice)
+  if (!expenses.some((e) => e.id === lastDeleted.id)) {
+    expenses.push(lastDeleted);
+    // Show the month it belongs to, so you can see it came back
+    filters.month = monthOf(lastDeleted);
+    saveFilters(filters);
+    saveExpenses(expenses);
+    renderList();
+  }
+  lastDeleted = null;
+  showToast('Expense restored');
 }
 
-// Back to "add mode" with an empty form
-function resetForm() {
-  editingId = null;
+// ===== 6b. The add / edit sheet =====
+
+// Today and yesterday as "YYYY-MM-DD", in your time zone (like todayString)
+function yesterdayString() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1); // setDate handles month and year changes (Mar 1 -> Feb 28)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Builds the category chips from CATEGORIES (once, at start-up):
+//   <input type="radio" name="category" id="cat-food" value="Food" class="visually-hidden">
+//   <label for="cat-food" class="chip">Food</label>
+function buildCategoryChips() {
+  for (const category of CATEGORIES) {
+    const id = `cat-${category.toLowerCase().replace(/\s+/g, '-')}`;
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.name = 'category';
+    radio.id = id;
+    radio.value = category;
+    radio.className = 'visually-hidden';
+    const label = makeElement('label', 'chip', category);
+    label.htmlFor = id;
+    categoryChips.append(radio, label);
+  }
+}
+
+// Ticks the When chip that matches a date: Today, Yesterday, or Pick a date (and shows the picker)
+function setWhen(dateString) {
+  dateInput.value = dateString;
+  let which = 'pick';
+  if (dateString === todayString()) which = 'today';
+  else if (dateString === yesterdayString()) which = 'yesterday';
+  form.elements.when.value = which;
+  dateInput.hidden = which !== 'pick';
+}
+
+// "45 / 200" under the note: only shown from 180 characters on, red from 190.
+// noteInput.maxLength reads the maxlength="200" from the HTML, so the number lives in one place.
+function updateNoteCount() {
+  const used = noteInput.value.length;
+  const max = noteInput.maxLength;
+  noteCount.textContent = `${used} / ${max}`;
+  noteCount.hidden = used < max - 20;
+  noteCount.classList.toggle('near-limit', used >= max - 10);
+}
+
+// Accepts "185", "49.50", "1,250" or ".5": a number above 0 with at most 2 decimals.
+// Returns the amount, or null if it isn't one.
+function parseAmount(text) {
+  const cleaned = text.replace(/[₱,\s]/g, '');
+  if (!/^(\d+(\.\d{0,2})?|\.\d{1,2})$/.test(cleaned)) return null;
+  const amount = Math.round(Number(cleaned) * 100) / 100;
+  return amount >= 0.01 ? amount : null;
+}
+
+function showAmountError(show) {
+  amountError.hidden = !show;
+  amountField.classList.toggle('invalid', show);
+  amountInput.setAttribute('aria-invalid', String(show));
+}
+
+// Delete -> "Delete this expense? [Yes, delete] [Cancel]" (and back)
+function showDeleteConfirm(show) {
+  deleteBtn.hidden = show;
+  deleteConfirm.hidden = !show;
+  // Focus the safe choice, so pressing Enter by accident deletes nothing
+  (show ? deleteNo : deleteBtn).focus();
+}
+
+// The button that opened the sheet, so focus can go back to it when the sheet closes
+let sheetOpener = null;
+
+// Opens the sheet. With an id: edit that expense. Without: a new expense.
+function openSheet(id) {
+  const expense = id ? expenses.find((e) => e.id === id) : null;
+  editingId = expense ? expense.id : null;
+  sheetOpener = expense ? { rowId: expense.id } : { button: addBtn };
+
   form.reset();
-  dateInput.value = todayString();
+  showAmountError(false);
+  deleteConfirm.hidden = true;
+  deleteBtn.hidden = false;
+  deleteArea.hidden = !expense;
+
+  if (expense) {
+    sheetTitle.textContent = 'Edit expense';
+    submitBtn.textContent = 'Save changes';
+    amountInput.value = String(expense.amount);
+    // An old category that isn't a chip any more falls back to Other
+    form.elements.category.value = CATEGORIES.includes(expense.category) ? expense.category : 'Other';
+    setWhen(expense.date);
+    noteInput.value = expense.note;
+  } else {
+    sheetTitle.textContent = 'New expense';
+    submitBtn.textContent = 'Save expense';
+    form.elements.category.value = 'Food';
+    setWhen(todayString());
+  }
   updateNoteCount();
 
-  formTitle.textContent = 'Add expense';
-  submitBtn.textContent = 'Add expense';
-  cancelBtn.hidden = true;
+  sheet.showModal();
+  sheet.querySelector('.sheet-scroll').scrollTop = 0;
+  // A new expense starts with the number keyboard up. (Editing doesn't: you may only
+  // want to change the category, and the keyboard would cover the sheet.)
+  if (!expense) amountInput.focus();
+}
+
+function closeSheet() {
+  if (sheet.open) sheet.close(); // the "close" listener below does the tidying up
+}
+
+// ===== 6c. Toast: a short message above the Add button =====
+let toastTimer = null;
+
+// showToast('Expense saved') or showToast('Expense deleted', { undo: true })
+function showToast(message, { undo = false } = {}) {
+  toastText.textContent = message;
+  toastUndo.hidden = !undo;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  // 3 seconds to read it; 5 when there's an Undo to reach for
+  toastTimer = setTimeout(hideToast, undo ? 5000 : 3000);
+}
+
+function hideToast() {
+  toast.classList.remove('show');
+  toastUndo.hidden = true;
 }
 
 // ===== 7. Events: react to what the user does =====
@@ -922,21 +1007,20 @@ form.addEventListener('submit', function (event) {
   // By default a form reloads the page when submitted. We stop that.
   event.preventDefault();
 
-  const amount = Number(amountInput.value);
-
-  // Double-check in JavaScript (the HTML checks can be bypassed)
-  if (!(amount > 0)) {
-    alert('Please enter an amount greater than ₱0.');
+  const amount = parseAmount(amountInput.value);
+  if (amount === null) {
+    showAmountError(true);
+    amountInput.focus();
     return;
   }
   if (!dateInput.value) {
-    alert('Please pick a date.');
-    return;
+    // "Pick a date" with the date cleared: open the date field again
+    setWhen(todayString());
   }
 
   const values = {
-    amount: Math.round(amount * 100) / 100, // keep 2 decimal places
-    category: categoryInput.value,
+    amount,
+    category: form.elements.category.value || 'Other',
     date: dateInput.value,
     note: noteInput.value.trim(),
   };
@@ -947,44 +1031,87 @@ form.addEventListener('submit', function (event) {
   if (filters.category !== 'all' && filters.category !== values.category) filters.category = 'all';
   saveFilters(filters);
 
-  // Same form, two jobs: update if we're editing, otherwise add
+  // Same sheet, two jobs: update if we're editing, otherwise add
+  const wasEditing = Boolean(editingId);
   if (editingId) {
     updateExpense(editingId, values);
   } else {
-    addExpense({ id: makeId(), ...values });
+    const id = makeId();
+    addExpense({ id, ...values });
+    sheetOpener = { button: addBtn };
   }
 
-  // Get the form ready for the next expense
-  resetForm();
-  amountInput.focus();
+  closeSheet();
+  showToast(wasEditing ? 'Changes saved' : 'Expense saved');
 });
 
-cancelBtn.addEventListener('click', resetForm);
+// Typing in the amount clears the error as soon as it's fixed
+amountInput.addEventListener('input', function () {
+  if (!amountError.hidden && parseAmount(amountInput.value) !== null) showAmountError(false);
+});
+
+// The When chips: Today / Yesterday fill in the date; Pick a date shows the date field
+form.addEventListener('change', function (event) {
+  if (event.target.name !== 'when') return;
+  if (event.target.value === 'today') setWhen(todayString());
+  else if (event.target.value === 'yesterday') setWhen(yesterdayString());
+  else {
+    dateInput.hidden = false;
+    dateInput.focus();
+  }
+});
+
+// Picking a date that happens to be today or yesterday ticks that chip instead
+dateInput.addEventListener('change', function () {
+  if (dateInput.value) setWhen(dateInput.value);
+});
 
 // "input" fires on every keystroke, paste, or delete in the note box
 noteInput.addEventListener('input', updateNoteCount);
 
-// ONE click listener on the whole list handles every Edit and Delete button
-// (this is called "event delegation"). It still works for rows that are
-// added later, because the list itself never gets replaced.
-list.addEventListener('click', function (event) {
-  // closest() finds the button that was clicked (or null if you clicked text)
-  const button = event.target.closest('button[data-action]');
-  if (!button) return;
+sheetClose.addEventListener('click', closeSheet);
 
-  const id = button.dataset.id;
-  const action = button.dataset.action;
+// A tap on the dark backdrop closes the sheet (without saving). The backdrop counts as the
+// <dialog> itself, while taps inside the sheet land on its contents.
+sheet.addEventListener('click', function (event) {
+  if (event.target === sheet) closeSheet();
+});
 
-  if (action === 'edit') {
-    if (confirmingDeleteId) cancelDelete(); // starting an edit closes any open "Delete this?"
-    startEdit(id);
-  } else if (action === 'delete') {
-    askToDelete(id);          // first click: ask
-  } else if (action === 'confirm-delete') {
-    deleteExpense(id);        // "Yes, delete": really delete
-  } else if (action === 'cancel-delete') {
-    cancelDelete();           // "Cancel": back to normal
+// However the sheet closed (×, Esc, backdrop, Save), tidy up and give focus back
+sheet.addEventListener('close', function () {
+  editingId = null;
+  const opener = sheetOpener;
+  sheetOpener = null;
+  if (opener?.rowId) {
+    // The list was redrawn, so find the row again (it may be gone, or in another month)
+    const row = list.querySelector(`button[data-id="${CSS.escape(opener.rowId)}"]`);
+    (row || addBtn).focus({ preventScroll: true });
+  } else {
+    addBtn.focus({ preventScroll: true });
   }
+});
+
+deleteBtn.addEventListener('click', () => showDeleteConfirm(true));
+deleteNo.addEventListener('click', () => showDeleteConfirm(false));
+deleteYes.addEventListener('click', function () {
+  const id = editingId;
+  sheetOpener = { button: addBtn }; // the row is gone, so focus goes to Add expense
+  deleteExpense(id);
+  closeSheet();
+  showToast('Expense deleted', { undo: true });
+});
+
+toastUndo.addEventListener('click', function () {
+  clearTimeout(toastTimer);
+  undoDelete();
+});
+
+// ONE click listener on the whole list handles every row (this is called "event delegation").
+// It still works for rows that are added later, because the list itself never gets replaced.
+list.addEventListener('click', function (event) {
+  // closest() finds the row button that was tapped (or null if you tapped between rows)
+  const row = event.target.closest('button[data-id]');
+  if (row) openSheet(row.dataset.id);
 });
 
 // Picking a month in the Live badge: remember the choice, save it, redraw.
@@ -1016,22 +1143,8 @@ filterClear.addEventListener('click', function () {
   renderList();
 });
 
-// The floating Add expense button: go to the form, ready to type an amount.
-// (In the next step the form moves into a sheet that slides up instead.)
-addBtn.addEventListener('click', function () {
-  if (confirmingDeleteId) cancelDelete();
-  formCard.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-  amountInput.focus({ preventScroll: true });
-});
-
-// While the form is on screen the floating button would just cover it (and ride up on the
-// keyboard), so it steps aside. IntersectionObserver tells us when the form scrolls in or out.
-if ('IntersectionObserver' in window) {
-  new IntersectionObserver(
-    ([entry]) => document.body.classList.toggle('form-in-view', entry.isIntersecting),
-    { threshold: 0.25 }
-  ).observe(formCard);
-}
+// The floating Add expense button opens the sheet for a new expense
+addBtn.addEventListener('click', () => openSheet(null));
 
 exportBtn.addEventListener('click', exportCsv);
 
@@ -1100,7 +1213,7 @@ if ('serviceWorker' in navigator) {
   offlineStatus.textContent = 'This browser can\'t save the app for offline use.';
 }
 
-resetForm(); // start in "add mode" with today's date
+buildCategoryChips();
 renderList();
 
 // Outfit is a bit wider than the phone's own font, so measure the big total again once it has

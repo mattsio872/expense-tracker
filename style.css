@@ -50,8 +50,6 @@
   --cat-nights-out: #e8d27a;
   --cat-school: #6fc6cf;
   --cat-other: #a79c92;
-  /* "Entertainment" becomes "Nights out" in a later step. Until then it borrows that color. */
-  --cat-entertainment: var(--cat-nights-out);
 
   /* Type */
   --font-sans: Outfit, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -66,11 +64,13 @@
   --radius-md: 14px;  /* inputs */
   --radius-lg: 18px;  /* cards */
   --radius-xl: 22px;  /* lightbox */
+  --radius-sheet: 28px; /* top corners of the add / edit sheet */
   --radius-pill: 999px;
 
   /* Light */
   --glow-lightbox: 0 0 0 1px #fff8ea, 0 0 46px rgba(255,236,200,.28), 0 18px 40px rgba(0,0,0,.45);
   --glow-button: 0 0 30px rgba(255,236,200,.3);
+  --glow-field: 0 0 36px rgba(255,236,200,.22);
   --walnut-edge: inset 0 1px 0 rgba(255,220,180,.18);
 
   /* Motion: a strong ease-out, so presses answer immediately */
@@ -300,27 +300,25 @@ h2 {
 }
 
 /* =========================================================
-   6. Form
+   6. Form fields (inside the add / edit sheet)
    ========================================================= */
-/* When the Add expense button scrolls to the form, leave some air (and the notch) above it */
-#form-card {
-  scroll-margin-top: calc(16px + env(safe-area-inset-top, 0px));
-}
-
 #expense-form {
-  display: grid;
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* lets the fields area scroll inside the sheet */
 }
 
-.field label {
+.field label,
+.chip-group legend {
   display: block;
   font-weight: 600;
   font-size: 0.9375rem; /* 15px */
-  margin-bottom: 6px;
+  line-height: 20px;
+  margin-bottom: var(--space-2);
   color: var(--ink);
 }
 
-/* The "45 / 200" character counter under the note */
+/* The "195 / 200" character counter under the note (only near the limit) */
 .hint {
   display: block;
   margin-top: 4px;
@@ -357,31 +355,137 @@ input::placeholder {
   opacity: 1; /* Firefox fades placeholders by default */
 }
 
-/* The ₱ sign sitting inside the amount box */
-.amount-input {
-  position: relative;
+/* The amount: a lit panel, like the total on the home screen */
+.amount-field {
+  background: var(--lightbox);
+  color: var(--lightbox-ink);
+  border: 1px solid var(--lightbox);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glow-field);
+  padding: 14px 18px 10px;
 }
 
-.currency {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--ink-muted);
-  pointer-events: none; /* taps go through to the input */
+.amount-field label {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--lightbox-muted);
 }
 
-.amount-input input {
-  padding-left: 32px; /* make room for the ₱ */
-}
-
-.form-actions {
+.amount-row {
   display: flex;
-  gap: var(--space-2);
+  align-items: baseline;
+  gap: 6px;
 }
 
-.form-actions .btn {
-  flex: 1; /* buttons share the row equally */
+.amount-currency {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 64px;
+  color: var(--lightbox-muted);
+}
+
+/* The big number. Plain on the panel: no box of its own */
+.amount-field input {
+  min-height: 0;
+  height: 64px;
+  padding: 0;
+  font-size: 56px;
+  font-weight: 800;
+  letter-spacing: -2px;
+  line-height: 64px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lightbox-ink);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  outline: none; /* the whole panel shows the focus instead (below) */
+}
+
+.amount-field input::placeholder {
+  color: var(--lightbox-track);
+}
+
+/* Focus ring on the panel while you type the amount */
+.amount-field:focus-within {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Not a valid amount: red edge + the message under it */
+.amount-field.invalid {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger), var(--glow-field);
+}
+
+.field-error {
+  margin: var(--space-2) 2px 0;
+  font-size: 0.8125rem; /* 13px */
+  color: var(--danger);
+}
+
+/* A group of chips with its heading ("Category", "When") */
+.chip-group {
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.chip-group legend {
+  padding: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-2); /* 4px + the 2px margins = 8px between rows */
+}
+
+/* A chip is the <label> of a hidden radio button: tapping it picks the radio */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  margin: 2px 0; /* 40px chip + 2px above and below = a 44px tall tap row */
+  padding: 0 14px;
+  font-size: 0.9375rem; /* 15px */
+  font-weight: 600;
+  color: var(--ink);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 100ms var(--ease-out);
+}
+
+.chip:active {
+  transform: scale(0.97);
+}
+
+/* The picked chip: gold with dark text. ":checked + .chip" = the label right after a ticked radio */
+input:checked + .chip {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--lightbox-ink);
+}
+
+/* The radio itself is invisible, so show its keyboard focus on the chip */
+input:focus-visible + .chip {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* The date field under the When chips, shown for "Pick a date" */
+.date-input {
+  margin-top: var(--space-2);
+}
+
+.field {
+  margin-top: var(--space-5);
 }
 
 /* =========================================================
@@ -419,12 +523,6 @@ input::placeholder {
   color: var(--lightbox-ink);
   box-shadow: var(--glow-button);
   font-weight: 700;
-}
-
-/* The form's Add/Save button is the big one */
-.form-actions .btn-primary {
-  min-height: 58px;
-  font-size: 1.125rem; /* 18px */
 }
 
 .btn-danger {
@@ -656,33 +754,48 @@ button.cone:active {
   white-space: nowrap;
 }
 
-/* One row:  • Jollibee lunch with classmates     ₱185.00
-               Food                        [Edit] [Delete]
+/* One row, and the whole row is a button (tap to edit):
+     • Jollibee lunch with classmates     ₱185.00
+       Food
    A grid with 3 columns: the dot, the text (takes the rest), the amount. */
-.expense {
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto;
-  column-gap: var(--space-3);
-  row-gap: var(--space-2);
-  align-items: center;
-  min-height: 62px;
-  padding: var(--space-3) 0;
+.expense + .expense {
   border-top: 1px solid var(--line-soft);
 }
 
-.expense:first-child {
-  border-top: none;
+.expense-button {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+  align-items: center;
+  width: 100%;
+  min-height: 62px;
+  padding: var(--space-2) 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Pressed: the row lights up a touch the moment the finger lands */
+.expense-button:active {
+  background: var(--surface);
 }
 
 .expense-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  align-self: start;
-  margin-top: 6px; /* lines it up with the middle of the title's first line */
 }
 
 .expense-info {
+  display: flex;
+  flex-direction: column;
   min-width: 0; /* lets the title shrink and get "…" instead of pushing the amount away */
 }
 
@@ -703,26 +816,21 @@ button.cone:active {
 }
 
 .expense-amount {
-  align-self: start;
   font-weight: 700;
   font-size: 1.0625rem; /* 17px */
-  line-height: 22px;
+  line-height: 24px;
   white-space: nowrap; /* the amount never wraps; the title gives way instead */
 }
 
-/* Edit / Delete sit under the text, lined up on the right */
-.expense-actions {
-  grid-column: 2 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
+@media (hover: hover) and (pointer: fine) {
+  .expense-button:hover {
+    background: var(--surface);
+  }
 }
 
-/* "Delete this?" text shown next to the Yes/Cancel buttons */
+/* "Delete this expense?" text shown next to the Yes/Cancel buttons */
 .confirm-text {
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: var(--danger);
 }
@@ -857,7 +965,6 @@ button.cone:active {
   max-width: 440px;
   margin: 0 auto;
   z-index: 10;
-  transition: transform 100ms var(--ease-out), opacity 200ms var(--ease-out), visibility 200ms;
 }
 
 /* The list fades into the dark behind the button instead of being cut off by it */
@@ -870,35 +977,215 @@ button.cone:active {
   background: linear-gradient(to bottom, transparent, var(--ground) 70%);
   pointer-events: none; /* taps go through to whatever is under the fade */
   z-index: 9;
-  transition: opacity 200ms var(--ease-out);
-}
-
-/* While the form is on screen the button steps aside (app.js sets form-in-view) */
-.form-in-view .add-button {
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(12px);
-}
-
-.form-in-view .add-fade {
-  opacity: 0;
 }
 
 /* =========================================================
-   13. Reduced motion: no press animation for people who turn motion off
+   13. The add / edit sheet
+   ========================================================= */
+/* A <dialog> pinned to the bottom of the screen: full width on a phone (max 480px),
+   never taller than the screen minus 110px, so a strip of the page stays visible above it */
+.sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100dvh - 110px);
+  margin: 0 auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  background: var(--surface);
+  border: 0;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  box-shadow: 0 -1px 0 var(--line);
+}
+
+/* A closed <dialog> must stay hidden (our display: flex above would show it) */
+.sheet:not([open]) {
+  display: none;
+}
+
+/* The dimmed page behind the sheet */
+.sheet::backdrop {
+  background: rgba(12, 9, 8, .7);
+}
+
+/* While the sheet is open, the page behind it doesn't scroll */
+html:has(.sheet[open]) {
+  overflow: hidden;
+}
+
+.sheet-top {
+  padding: 10px var(--space-5) 0;
+}
+
+/* The little bar at the top that says "this slides" */
+.sheet-handle {
+  width: 40px;
+  height: 5px;
+  margin: 0 auto 10px;
+  border-radius: var(--radius-pill);
+  background: #4a3a32;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.sheet-head h2 {
+  margin: 0;
+  font-size: 1.375rem; /* 22px */
+  line-height: 28px;
+  font-weight: 700;
+}
+
+/* The fields scroll on their own if the keyboard leaves too little room.
+   overscroll-behavior: contain = reaching the end doesn't scroll the page behind. */
+.sheet-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px var(--space-5) var(--space-5); /* 4px: room for the amount's focus ring */
+}
+
+/* Save (and Delete) stay at the bottom of the sheet, above the home bar */
+.sheet-actions {
+  padding: var(--space-3) var(--space-5) calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line-soft);
+}
+
+.sheet-actions .glow-button {
+  width: 100%;
+}
+
+.delete-area {
+  margin-top: var(--space-2);
+  text-align: center;
+}
+
+/* "Delete this expense?" on its own line, then [Yes, delete] [Cancel] side by side */
+.delete-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-1) 0;
+}
+
+.delete-confirm .confirm-text {
+  flex-basis: 100%;
+  text-align: center;
+}
+
+/* Round 44px button for the × */
+.icon-button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--ink);
+  background: var(--surface-raised);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 100ms var(--ease-out);
+}
+
+.icon-button:active {
+  transform: scale(0.97);
+}
+
+/* A plain text button that's still finger-sized ("Delete expense", "Undo") */
+.text-button {
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.text-button.danger {
+  color: var(--danger);
+}
+
+.text-button.gold {
+  color: var(--gold);
+}
+
+/* =========================================================
+   14. Toast: "Expense saved", "Expense deleted · Undo"
+   ========================================================= */
+/* Floats just above the Add expense button (34px + 58px button + 12px gap) */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(34px + 58px + 12px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: calc(100% - 40px);
+  min-height: 44px;
+  padding: 0 6px 0 16px;
+  font-size: 0.875rem; /* 14px */
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  /* Hidden: a little lower and transparent. .show slides it up into place. */
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 8px);
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out), visibility 180ms;
+}
+
+.toast.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+/* Without an Undo button the toast's right side gets the same padding as the left */
+.toast:has(#toast-undo[hidden]) {
+  padding-right: 16px;
+}
+
+/* =========================================================
+   15. Reduced motion: no press animation for people who turn motion off
    ========================================================= */
 @media (prefers-reduced-motion: reduce) {
   .btn,
   button.cone,
   .glow-button,
-  .add-button,
-  .add-fade {
+  .icon-button,
+  .chip,
+  .toast {
     transition: none;
   }
   .btn:active:not(:disabled),
   button.cone:active,
   .glow-button:active,
-  .form-in-view .add-button {
+  .icon-button:active,
+  .chip:active {
     transform: none;
   }
 }

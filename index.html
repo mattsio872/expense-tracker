@@ -6,7 +6,7 @@
   <!-- Makes the page fit phone screens instead of showing a zoomed-out desktop page.
        viewport-fit=cover lets the dark background run under the notch and home bar;
        style.css then pads the content back out with env(safe-area-inset-*). -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <!-- The app is always dark ("After Hours"), so form controls and scrollbars are dark too -->
   <meta name="color-scheme" content="dark">
   <title>Matt's Expenses</title>
@@ -26,11 +26,11 @@
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Expenses">
-  <!-- "?v=6" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+  <!-- "?v=7" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
        style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
        AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
        instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
   <header class="app-header">
@@ -83,59 +83,7 @@
       <ul id="expense-list" class="expense-list"></ul>
     </section>
 
-    <!-- 1. The form for adding (and editing) an expense. The floating Add expense button
-         brings you here (in the next step it moves into a sheet that slides up). -->
-    <section class="card" id="form-card" aria-labelledby="form-title">
-      <h2 id="form-title">Add expense</h2>
-
-      <form id="expense-form">
-        <!-- Each label + input pair is wrapped in a "field" so they stay together -->
-        <div class="field">
-          <label for="amount">Amount</label>
-          <div class="amount-input">
-            <span class="currency" aria-hidden="true">₱</span>
-            <input id="amount" name="amount" type="number" inputmode="decimal"
-                   min="0.01" step="0.01" placeholder="0.00" required>
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="category">Category</label>
-          <select id="category" name="category" required>
-            <option value="Food">Food</option>
-            <option value="Transport">Transport</option>
-            <option value="Bills">Bills</option>
-            <option value="Shopping">Shopping</option>
-            <option value="Health">Health</option>
-            <option value="Entertainment">Entertainment</option>
-            <option value="School">School</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="date">Date</label>
-          <input id="date" name="date" type="date" required>
-        </div>
-
-        <div class="field">
-          <label for="note">Note <span class="optional">(optional)</span></label>
-          <!-- maxlength stops typing at 200 characters; the counter below shows how many are left.
-               aria-describedby makes screen readers read the counter along with the field. -->
-          <input id="note" name="note" type="text" maxlength="200"
-                 placeholder="e.g. Lunch with classmates" aria-describedby="note-count">
-          <small id="note-count" class="hint">0 / 200</small>
-        </div>
-
-        <div class="form-actions">
-          <button type="submit" id="submit-btn" class="btn btn-primary">Add expense</button>
-          <!-- Only shown while editing. type="button" so it doesn't submit the form -->
-          <button type="button" id="cancel-btn" class="btn" hidden>Cancel</button>
-        </div>
-      </form>
-    </section>
-
-    <!-- 4. Backup: save all expenses to a CSV file (and, in the next step, load them back) -->
+    <!-- Backup: save all expenses to a CSV file, or load them back from one -->
     <section class="card backup-card" aria-labelledby="backup-title">
       <h2 id="backup-title">Backup</h2>
       <p class="card-note">Save all your expenses as a CSV file (opens in Excel or Google Sheets), or load them back from one.</p>
@@ -186,7 +134,101 @@
     Add expense
   </button>
 
+  <!-- The add / edit sheet. A native <dialog>: showModal() keeps keyboard focus inside it,
+       Esc closes it, and the page behind can't be tapped. app.js opens it in "new" or "edit" mode. -->
+  <dialog id="expense-sheet" class="sheet" aria-labelledby="sheet-title">
+    <div class="sheet-top">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-head">
+        <h2 id="sheet-title">New expense</h2>
+        <button type="button" id="sheet-close" class="icon-button" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+            <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- novalidate: app.js checks the fields itself and shows its own friendly messages -->
+    <form id="expense-form" class="sheet-form" novalidate>
+      <!-- Everything above the Save button scrolls if the keyboard leaves too little room -->
+      <div class="sheet-scroll">
+        <!-- The amount sits on a lit panel, like the total on the home screen.
+             type="text" + inputmode="decimal": the number keyboard with a dot, and no
+             surprises from type="number" (scroll-wheel changes, "e" allowed). -->
+        <div class="amount-field" id="amount-field">
+          <label for="amount">Amount</label>
+          <div class="amount-row">
+            <span class="amount-currency" aria-hidden="true">₱</span>
+            <input id="amount" name="amount" type="text" inputmode="decimal" autocomplete="off"
+                   enterkeyhint="done" placeholder="0" aria-describedby="amount-error">
+          </div>
+        </div>
+        <p id="amount-error" class="field-error" hidden>Enter an amount, like 185 or 49.50</p>
+
+        <!-- Category chips: real radio buttons (hidden) with chip-shaped labels.
+             The arrow keys move between them, and the form reads the choice like any radio.
+             app.js builds the chips from the CATEGORIES list. -->
+        <fieldset class="chip-group">
+          <legend>Category</legend>
+          <div class="chips" id="category-chips"></div>
+        </fieldset>
+
+        <fieldset class="chip-group">
+          <legend>When</legend>
+          <div class="chips">
+            <input type="radio" name="when" id="when-today" value="today" class="visually-hidden" checked>
+            <label for="when-today" class="chip">Today</label>
+            <input type="radio" name="when" id="when-yesterday" value="yesterday" class="visually-hidden">
+            <label for="when-yesterday" class="chip">Yesterday</label>
+            <input type="radio" name="when" id="when-pick" value="pick" class="visually-hidden">
+            <label for="when-pick" class="chip">
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="2" y="3" width="12" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+              Pick a date
+            </label>
+          </div>
+          <!-- The real date. Today/Yesterday fill it in; "Pick a date" shows it so you can choose. -->
+          <label for="date" class="visually-hidden">Date</label>
+          <input id="date" name="date" type="date" class="date-input" hidden>
+        </fieldset>
+
+        <div class="field">
+          <label for="note">Note <span class="optional">(optional)</span></label>
+          <!-- maxlength stops typing at 200 characters; the counter appears near the limit.
+               aria-describedby makes screen readers read the counter along with the field. -->
+          <input id="note" name="note" type="text" maxlength="200" enterkeyhint="done"
+                 placeholder="Lunch with classmates" aria-describedby="note-count">
+          <small id="note-count" class="hint" hidden>0 / 200</small>
+        </div>
+      </div>
+
+      <div class="sheet-actions">
+        <button type="submit" id="submit-btn" class="glow-button">Save expense</button>
+
+        <!-- Edit mode only. Deleting asks first, right here (no confirm() popup: some
+             in-app browsers block those). -->
+        <div id="delete-area" class="delete-area" hidden>
+          <button type="button" id="delete-btn" class="text-button danger">Delete expense</button>
+          <div id="delete-confirm" class="delete-confirm" hidden>
+            <span class="confirm-text">Delete this expense?</span>
+            <button type="button" id="delete-yes" class="btn btn-danger-solid">Yes, delete</button>
+            <button type="button" id="delete-no" class="btn">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Short messages like "Expense saved". role="status" makes screen readers read them. -->
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span id="toast-text"></span>
+    <button type="button" id="toast-undo" class="text-button gold" hidden>Undo</button>
+  </div>
+
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=6" defer></script>
+  <script src="app.js?v=7" defer></script>
 </body>
 </html>
