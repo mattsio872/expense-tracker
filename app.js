@@ -1023,7 +1023,7 @@ function openSheet(id) {
   }
   updateNoteCount();
 
-  sheet.showModal();
+  showSheet(sheet);
   sheet.querySelector('.sheet-scroll').scrollTop = 0;
   // A new expense starts with the number keyboard up. (Editing doesn't: you may only
   // want to change the category, and the keyboard would cover the sheet.)
@@ -1034,7 +1034,7 @@ function openSheet(id) {
 }
 
 function closeSheet() {
-  if (sheet.open) sheet.close(); // the "close" listener below does the tidying up
+  dismissSheet(sheet); // slides down, then closes; the "close" listener below tidies up
 }
 
 // ===== 6c. Toast: a short message above the Add button =====
@@ -1053,6 +1053,207 @@ function showToast(message, { undo = false } = {}) {
 function hideToast() {
   toast.classList.remove('show');
   toastUndo.hidden = true;
+}
+
+// ===== 6d. Sheets: slide in, slide out, and drag down to close =====
+// Both sheets (add / edit, and Backup & settings) work the same way:
+// - they slide up when they open and slide down when they close;
+// - you can drag one down to close it: by its top (the handle and title) any time, or by its
+//   content when that's scrolled to the top. While your finger is down the sheet follows it
+//   exactly, and the dimmed page behind fades with it. When you let go, a long enough drag
+//   or a quick flick closes it; otherwise it slides back;
+// - a sheet that's sliding can be caught with your finger mid-way.
+// The animations use the Web Animations API (element.animate): smooth like CSS, controlled from JS.
+
+// The iOS sheet curve: very steep at the start, then a gentle settle
+const SHEET_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
+const SHEET_DIM = 0.7; // how dark the page behind gets (0 = not at all, 1 = black)
+
+function prefersReducedMotion() {
+  return matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function sheetPanel(dialog) {
+  return dialog.querySelector('.sheet-panel');
+}
+
+// The darkness behind the sheet. amount: 1 = fully dimmed, 0 = not dimmed.
+function dimColor(amount) {
+  return `rgba(12, 9, 8, ${(SHEET_DIM * Math.min(Math.max(amount, 0), 1)).toFixed(3)})`;
+}
+
+// Where the panel is right now, in px below its resting place (works mid-animation too)
+function currentSheetY(dialog) {
+  const transform = getComputedStyle(sheetPanel(dialog)).transform;
+  return transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m42;
+}
+
+// Puts the panel at y px below its resting place, with the dim to match (no animation)
+function setSheetY(dialog, y) {
+  const panel = sheetPanel(dialog);
+  panel.style.transform = `translateY(${y}px)`;
+  dialog.style.backgroundColor = dimColor(1 - y / panel.offsetHeight);
+}
+
+// Stops any slide in progress and holds the sheet exactly where it is. Returns that y.
+function holdSheet(dialog) {
+  const y = currentSheetY(dialog);
+  for (const animation of [...sheetPanel(dialog).getAnimations(), ...dialog.getAnimations()]) {
+    animation.cancel();
+  }
+  delete dialog.dataset.closing; // caught while closing: it isn't closing any more
+  setSheetY(dialog, y);
+  return y;
+}
+
+// Slides the sheet from wherever it is to y, then calls onDone (if it wasn't interrupted)
+function slideSheet(dialog, y, duration, onDone) {
+  const panel = sheetPanel(dialog);
+  const fromY = currentSheetY(dialog);
+  const fromColor = getComputedStyle(dialog).backgroundColor;
+  holdSheet(dialog);
+  setSheetY(dialog, y); // the end state; the animation below plays the way there
+  if (prefersReducedMotion() || duration <= 0) {
+    onDone?.();
+    return;
+  }
+  const options = { duration, easing: SHEET_EASE };
+  const slide = panel.animate(
+    [{ transform: `translateY(${fromY}px)` }, { transform: `translateY(${y}px)` }], options
+  );
+  dialog.animate([{ backgroundColor: fromColor }, { backgroundColor: dialog.style.backgroundColor }], options);
+  // onfinish doesn't run if the slide is cancelled (caught by a finger, or reopened)
+  if (onDone) slide.onfinish = onDone;
+}
+
+// Opens a sheet: it slides up from below the screen
+function showSheet(dialog) {
+  if (!dialog.open) {
+    dialog.showModal();
+    setSheetY(dialog, sheetPanel(dialog).offsetHeight); // start just below the screen
+  }
+  slideSheet(dialog, 0, 280);
+}
+
+// Closes a sheet: it slides down, and THEN the dialog really closes. duration is shorter after
+// a fast flick, so the sheet leaves at the speed your finger threw it.
+function dismissSheet(dialog, duration = 200) {
+  if (!dialog.open || dialog.dataset.closing) return;
+  dialog.dataset.closing = 'true';
+  slideSheet(dialog, sheetPanel(dialog).offsetHeight, duration, () => dialog.close());
+}
+
+// Dragging up past the top: the sheet moves less and less the further you pull (a rubber band),
+// instead of stopping dead
+function rubberBand(distance) {
+  return 12 * Math.log1p(distance / 12);
+}
+
+function setupSheet(dialog) {
+  const panel = sheetPanel(dialog);
+  const scroller = dialog.querySelector('.sheet-scroll');
+  let drag = null; // the touch in progress, or null
+
+  // Esc: slide away instead of vanishing
+  dialog.addEventListener('cancel', function (event) {
+    event.preventDefault();
+    dismissSheet(dialog);
+  });
+
+  // A tap on the dimmed area (the see-through part of the dialog) closes it
+  dialog.addEventListener('click', function (event) {
+    if (event.target === dialog) dismissSheet(dialog);
+  });
+
+  // However it closed, clear the leftover position so it opens fresh next time
+  dialog.addEventListener('close', function () {
+    delete dialog.dataset.closing;
+    panel.style.transform = '';
+    dialog.style.backgroundColor = '';
+  });
+
+  // Touch events (not pointer events): they let us stop the content from scrolling
+  // with preventDefault() once we decide the finger is dragging the sheet instead.
+  panel.addEventListener('touchstart', function (event) {
+    if (event.touches.length !== 1) {
+      // A second finger: ignore it, keep following the first one (no jumping)
+      if (drag && drag.mode !== 'dragging') drag = null;
+      return;
+    }
+    const touch = event.touches[0];
+    drag = {
+      mode: 'deciding',              // 'deciding' -> 'dragging' or 'ignored'
+      startX: touch.clientX,
+      startY: touch.clientY,
+      onContent: scroller.contains(event.target),
+      contentAtTop: scroller.scrollTop <= 0,
+      fromY: 0,
+      samples: [{ y: touch.clientY, time: event.timeStamp }],
+    };
+    // A sheet caught mid-slide: hold it right where the finger landed
+    if (panel.getAnimations().length) {
+      drag.mode = 'dragging';
+      drag.fromY = holdSheet(dialog);
+    }
+  }, { passive: true });
+
+  panel.addEventListener('touchmove', function (event) {
+    if (!drag || drag.mode === 'ignored') return;
+    const touch = event.touches[0];
+    const dy = touch.clientY - drag.startY;
+    const dx = touch.clientX - drag.startX;
+
+    if (drag.mode === 'deciding') {
+      if (Math.abs(dy) < 6 && Math.abs(dx) < 6) return; // too small to tell yet
+      const downwards = Math.abs(dy) > Math.abs(dx) && dy > 0;
+      // On the top part: any vertical drag moves the sheet. On the content: only a drag down
+      // while it's scrolled to the top (otherwise the content scrolls, as normal).
+      const vertical = Math.abs(dy) > Math.abs(dx);
+      const takeIt = drag.onContent ? downwards && drag.contentAtTop && scroller.scrollTop <= 0 : vertical;
+      if (!takeIt) {
+        drag.mode = 'ignored';
+        return;
+      }
+      drag.mode = 'dragging';
+      drag.fromY = holdSheet(dialog);
+      drag.startY = touch.clientY; // follow the finger from here, 1:1
+    }
+
+    // Dragging: the sheet IS the finger. preventDefault stops the content scrolling along.
+    event.preventDefault();
+    let y = drag.fromY + (touch.clientY - drag.startY);
+    if (y < 0) y = -rubberBand(-y);
+    setSheetY(dialog, y);
+
+    // Remember the last 100ms of movement, to know how fast the finger was going at the end
+    drag.samples.push({ y: touch.clientY, time: event.timeStamp });
+    while (drag.samples.length > 2 && event.timeStamp - drag.samples[0].time > 100) drag.samples.shift();
+  }, { passive: false });
+
+  function release() {
+    if (!drag || drag.mode !== 'dragging') {
+      drag = null;
+      return;
+    }
+    const first = drag.samples[0];
+    const last = drag.samples[drag.samples.length - 1];
+    const velocity = (last.y - first.y) / Math.max(last.time - first.time, 1); // px per ms, + = down
+    drag = null;
+
+    const y = currentSheetY(dialog);
+    const height = panel.offsetHeight;
+    // Close on distance (a third of the way down) OR on a quick flick down
+    if (y > height / 3 || (velocity > 0.3 && y > 0)) {
+      // Leave at the finger's speed: a fast flick closes faster
+      const duration = Math.min(Math.max((height - y) / Math.max(velocity, 0.8), 120), 260);
+      dismissSheet(dialog, duration);
+    } else {
+      slideSheet(dialog, 0, 240); // not far enough: slide back up, quickly
+    }
+  }
+
+  panel.addEventListener('touchend', release);
+  panel.addEventListener('touchcancel', release);
 }
 
 // ===== 7. Events: react to what the user does =====
@@ -1123,12 +1324,6 @@ dateInput.addEventListener('change', function () {
 noteInput.addEventListener('input', updateNoteCount);
 
 sheetClose.addEventListener('click', closeSheet);
-
-// A tap on the dark backdrop closes the sheet (without saving). The backdrop counts as the
-// <dialog> itself, while taps inside the sheet land on its contents.
-sheet.addEventListener('click', function (event) {
-  if (event.target === sheet) closeSheet();
-});
 
 // However the sheet closed (×, Esc, backdrop, Save), tidy up and give focus back
 sheet.addEventListener('close', function () {
@@ -1205,17 +1400,12 @@ settingsBtn.addEventListener('click', function () {
   // Plain digits in the field (10000, 2500.5), so it's easy to edit
   budgetInput.value = budget === null ? '' : String(budget);
   showBudgetError(false);
-  settingsSheet.showModal();
+  showSheet(settingsSheet);
   settingsSheet.focus(); // start at the sheet, not with a focus ring on the ×
   settingsSheet.querySelector('.sheet-scroll').scrollTop = 0;
 });
 
-settingsClose.addEventListener('click', () => settingsSheet.close());
-
-// A tap on the dark backdrop closes it, like the expense sheet
-settingsSheet.addEventListener('click', function (event) {
-  if (event.target === settingsSheet) settingsSheet.close();
-});
+settingsClose.addEventListener('click', () => dismissSheet(settingsSheet));
 
 // Closed (×, Esc, backdrop): focus goes back to the link that opened it
 settingsSheet.addEventListener('close', () => settingsBtn.focus({ preventScroll: true }));
@@ -1313,6 +1503,8 @@ if ('serviceWorker' in navigator) {
 }
 
 buildCategoryChips();
+setupSheet(sheet);
+setupSheet(settingsSheet);
 renderList();
 
 // Outfit is a bit wider than the phone's own font, so measure the big total again once it has

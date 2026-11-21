@@ -1106,7 +1106,9 @@ button.cone:active {
   flex-direction: column;
   justify-content: flex-end; /* the panel at the bottom */
   color: var(--ink);
-  background: transparent;
+  /* The dimmed page behind the sheet. It's on the dialog itself (not ::backdrop) so app.js
+     can fade it together with the sheet while you drag it down. */
+  background: rgba(12, 9, 8, .7);
   border: 0;
   overflow: hidden;
 }
@@ -1137,9 +1139,9 @@ button.cone:active {
   display: none;
 }
 
-/* The dimmed page behind the sheet */
+/* The browser's own backdrop stays clear: the dialog above does the dimming */
 .sheet::backdrop {
-  background: rgba(12, 9, 8, .7);
+  background: transparent;
 }
 
 /* While the sheet is open, the page behind it doesn't scroll */
@@ -1147,8 +1149,18 @@ html:has(.sheet[open]) {
   overflow: hidden;
 }
 
+/* The top of the sheet (handle + title) is the drag handle: drag it down to close.
+   touch-action: none = the browser leaves every finger movement here to app.js. */
 .sheet-top {
   padding: 10px var(--space-5) 0;
+  touch-action: none;
+  cursor: grab;
+}
+
+/* The title can't be selected by accident while dragging */
+.sheet-top h2 {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* The little bar at the top that says "this slides" */
