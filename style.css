@@ -133,7 +133,7 @@ h2 {
 /* Every number lines up: all digits the same width */
 #total,
 .expense-amount,
-.day-total,
+.day-totals,
 .hint,
 .summary {
   font-variant-numeric: tabular-nums;
@@ -240,6 +240,7 @@ h2 {
    ========================================================= */
 .layout {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* the column never grows past the screen */
   gap: var(--space-5);
   padding: var(--space-6) var(--space-5) var(--space-5);
   max-width: 480px;
@@ -275,29 +276,48 @@ h2 {
 
 #total {
   display: block;
-  font-size: 72px;
-  line-height: 72px;
+  font-size: 64px;
+  line-height: 68px;
   font-weight: 800;
-  letter-spacing: -2.5px;
+  letter-spacing: -2.2px;
 }
 
-/* Smaller steps for big totals (app.js picks one if 72px doesn't fit) */
-.lightbox-total.is-medium #total { font-size: 56px; line-height: 64px; letter-spacing: -2px; }
-.lightbox-total.is-small #total  { font-size: 44px; line-height: 56px; letter-spacing: -1.5px; }
+/* Smaller steps for a big balance (app.js picks one if 64px doesn't fit) */
+.lightbox-total.is-medium #total { font-size: 52px; line-height: 60px; letter-spacing: -1.8px; }
+.lightbox-total.is-small #total  { font-size: 40px; line-height: 48px; letter-spacing: -1.2px; }
 
-.lightbox-compare {
-  margin-top: var(--space-2) !important;
-  font-size: 0.9375rem;
+/* "Earned this month  +₱16,200 | Spent this month  −₱2,849", under a thin rule */
+.lightbox-month {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: 14px;
+  border-top: 1px solid var(--lightbox-track);
+}
+
+.month-col-label {
+  font-size: 0.8125rem; /* 13px */
+  line-height: 18px;
   color: var(--lightbox-muted);
 }
 
-/* With a budget: a thin bar of how much is used, then "of ₱10,000 ...... ₱7,151 left" */
+.month-col-value {
+  /* 18px, a little smaller on very narrow phones so a 7-digit amount still fits its column */
+  font-size: clamp(14px, 4.8vw, 18px);
+  line-height: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* With a budget: a thin bar of how much is spent, then "Budget ₱10,000 ...... ₱7,151 left" */
 .budget {
   margin-top: var(--space-3);
 }
 
 .budget-track {
-  height: 6px;
+  height: 4px;
   border-radius: var(--radius-pill);
   background: var(--lightbox-track);
   overflow: hidden; /* rounds the fill's ends */
@@ -315,7 +335,8 @@ h2 {
   justify-content: space-between;
   gap: var(--space-3);
   margin-top: var(--space-2) !important;
-  font-size: 0.9375rem;
+  font-size: 0.875rem; /* 14px */
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--lightbox-muted);
 }
@@ -406,6 +427,7 @@ input::placeholder {
 }
 
 .amount-currency {
+  white-space: nowrap; /* "+₱" stays together */
   font-size: 40px;
   font-weight: 800;
   line-height: 64px;
@@ -778,11 +800,26 @@ button.cone:active {
   font-weight: 700;
 }
 
-.day-total {
+/* "+₱1,200 in   −₱230 out" on the right of a day header. With huge amounts on a narrow phone
+   the two parts wrap onto two lines (each part itself never breaks). */
+.day-totals {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  column-gap: 10px;
+  min-width: 0;
   font-size: 0.9375rem; /* 15px */
   font-weight: 600;
-  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.day-in {
+  color: var(--gold);
+}
+
+.day-out {
+  color: var(--ink-muted);
 }
 
 /* One row, and the whole row is a button (tap to edit):
@@ -846,6 +883,18 @@ button.cone:active {
   border-radius: 50%;
 }
 
+/* Income: a hollow gold ring instead of a filled category dot */
+.expense-dot.is-income {
+  background: var(--ground);
+  border: 2px solid var(--gold);
+}
+
+/* A balance adjustment: a quiet hollow ring */
+.expense-dot.is-adjustment {
+  background: var(--ground);
+  border: 2px solid var(--ink-faint);
+}
+
 .expense-info {
   display: flex;
   flex-direction: column;
@@ -875,6 +924,14 @@ button.cone:active {
   white-space: nowrap; /* the amount never wraps; the title gives way instead */
 }
 
+.expense-amount.is-income {
+  color: var(--gold);
+}
+
+.expense-amount.is-adjustment {
+  color: var(--ink-muted);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .expense-button:hover {
     background: var(--surface);
@@ -886,6 +943,88 @@ button.cone:active {
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--danger);
+}
+
+/* =========================================================
+   9b. Segmented controls: All | Expenses | Income, and Expense | Income in the sheet
+   ========================================================= */
+/* A pill-shaped track with equal segments. Each segment is the <label> of a hidden radio. */
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 4px;
+  background: #150f0d;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+}
+
+.segmented label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  font-size: 0.875rem; /* 14px */
+  font-weight: 700;
+  color: var(--ink-muted);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The picked segment lights up like the lightbox */
+.segmented input:checked + label {
+  background: var(--lightbox);
+  color: var(--lightbox-ink);
+}
+
+.segmented input:focus-visible + label {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Above the list: 14px of air under it */
+.segmented-list {
+  margin-bottom: 14px;
+}
+
+/* In the sheet, under the title: a bit taller, on the darker ground */
+.segmented-type {
+  margin-bottom: var(--space-3);
+  background: var(--ground);
+}
+
+.segmented-type label {
+  height: 40px;
+}
+
+/* Actual balance: the field and its Update button side by side */
+.balance-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.balance-row .money-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.balance-row .btn {
+  min-height: 50px; /* as tall as the field */
+}
+
+.balance-row .money-input.invalid input {
+  border-color: var(--danger);
+}
+
+.balance-status:empty {
+  display: none;
 }
 
 /* =========================================================

@@ -33,8 +33,26 @@ const backupReminder = document.getElementById('backup-reminder');
 const backupLast = document.getElementById('backup-last');
 const list = document.getElementById('expense-list');
 const totalEl = document.getElementById('total');
-const totalCompare = document.getElementById('total-compare');
 const totalLabel = document.getElementById('total-label');
+const earnedLabel = document.getElementById('earned-label');
+const earnedEl = document.getElementById('earned');
+const spentLabel = document.getElementById('spent-label');
+const spentEl = document.getElementById('spent');
+const listFilter = document.getElementById('list-filter');
+const amountPrefix = document.getElementById('amount-prefix');
+const deleteQuestion = document.getElementById('delete-question');
+const openingSheet = document.getElementById('opening-sheet');
+const openingForm = document.getElementById('opening-form');
+const openingText = document.getElementById('opening-text');
+const openingField = document.getElementById('opening-field');
+const openingAmount = document.getElementById('opening-amount');
+const openingError = document.getElementById('opening-error');
+const openingSkip = document.getElementById('opening-skip');
+const actualBalanceInput = document.getElementById('actual-balance');
+const balanceField = document.getElementById('balance-field');
+const balanceError = document.getElementById('balance-error');
+const balanceStatus = document.getElementById('balance-status');
+const balanceSaveBtn = document.getElementById('balance-save');
 const emptyMessage = document.getElementById('empty-message');
 const liveBadge = document.getElementById('live-badge');
 const liveLabel = document.getElementById('live-label');
@@ -56,9 +74,23 @@ const importMergeBtn = document.getElementById('import-merge');
 const importReplaceBtn = document.getElementById('import-replace');
 const importCancelBtn = document.getElementById('import-cancel');
 
-// ===== 2. The categories: the ONE list (the chips, the cones and CSV import all use it) =====
-// Each one needs a color in style.css: "--cat-" + the name in lowercase, spaces -> "-".
+// ===== 2. The categories: ONE list per type (the chips, the cones and CSV import all use them) =====
+// Expense categories each need a color in style.css: "--cat-" + the name in lowercase, spaces -> "-".
 const CATEGORIES = ['Food', 'Transport', 'Bills', 'Shopping', 'Health', 'Nights out', 'School', 'Other'];
+const INCOME_CATEGORIES = ['Allowance', 'Salary', 'Gift', 'Sold something', 'Other'];
+
+// "Adjust balance" (in settings) logs the difference under this category, as income or expense.
+// Adjustments count in the balance, but not in the cones, the budget or "Earned / Spent".
+const ADJUSTMENT = 'Adjustment';
+
+// The chips for a type: 'expense' or 'income'
+function categoriesFor(type) {
+  return type === 'income' ? INCOME_CATEGORIES : CATEGORIES;
+}
+
+function isAdjustment(entry) {
+  return entry.category === ADJUSTMENT;
+}
 
 // Old names that were renamed. Saved expenses, saved filters and imported CSVs are updated.
 const RENAMED_CATEGORIES = { Entertainment: 'Nights out' };
@@ -75,15 +107,21 @@ function loadExpenses() {
     // Only trust it if it really is an array. Otherwise start fresh.
     if (!Array.isArray(data)) return [];
 
-    // One-time update: "Entertainment" is now "Nights out". Rename, then save once.
-    let renamed = false;
-    for (const expense of data) {
-      if (RENAMED_CATEGORIES[expense.category]) {
-        expense.category = RENAMED_CATEGORIES[expense.category];
-        renamed = true;
+    // One-time updates, then save once:
+    // - "Entertainment" is now "Nights out";
+    // - every entry has a type ('expense' or 'income'). Entries from before income existed are expenses.
+    let changed = false;
+    for (const entry of data) {
+      if (RENAMED_CATEGORIES[entry.category]) {
+        entry.category = RENAMED_CATEGORIES[entry.category];
+        changed = true;
+      }
+      if (entry.type !== 'expense' && entry.type !== 'income') {
+        entry.type = 'expense';
+        changed = true;
       }
     }
-    if (renamed) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     return data;
   } catch (error) {
     // Broken JSON, or storage blocked (e.g. some private windows):
@@ -107,14 +145,16 @@ function saveExpenses(list) {
 // It's only a convenience, so if anything goes wrong we quietly fall back to the defaults.
 // month: which month the screen shows ("all" from older versions becomes the current month,
 // see updateMonthOptions). category: the speaker cone that's picked, or "all".
+// type: the All | Expenses | Income switch above the list ('all', 'expense' or 'income').
 const FILTERS_KEY = 'filters';
-const NO_FILTERS = { month: 'all', category: 'all' };
+const NO_FILTERS = { month: 'all', category: 'all', type: 'all' };
 
 function loadFilters() {
   try {
     const data = JSON.parse(localStorage.getItem(FILTERS_KEY));
     if (data && typeof data.month === 'string' && typeof data.category === 'string') {
       data.category = RENAMED_CATEGORIES[data.category] || data.category;
+      if (!['all', 'expense', 'income'].includes(data.type)) data.type = 'all'; // saved before income existed
       return data;
     }
   } catch (error) {
@@ -165,6 +205,28 @@ async function askToKeepStorage() {
   }
 }
 
+// The opening balance: what you had before the first entry, { amount, date }. null = not asked yet.
+// Balance = opening amount + all income - all expenses.
+const OPENING_KEY = 'openingBalance';
+
+function loadOpening() {
+  try {
+    const data = JSON.parse(localStorage.getItem(OPENING_KEY));
+    if (data && Number.isFinite(data.amount)) return { amount: data.amount, date: String(data.date || '') };
+  } catch (error) {
+    // broken or blocked: treat as not set
+  }
+  return null;
+}
+
+function saveOpening(value) {
+  try {
+    localStorage.setItem(OPENING_KEY, JSON.stringify(value));
+  } catch (error) {
+    showToast("Can't save on this browser");
+  }
+}
+
 // The monthly budget: a number of pesos, or null when there's none (the key is then removed).
 const BUDGET_KEY = 'budget';
 
@@ -189,7 +251,9 @@ function saveBudget(value) {
 }
 
 // ===== 3. State: the app's data =====
-// Every expense looks like: { id, amount, category, date, note }
+// Every entry looks like: { id, type, amount, category, date, note }
+// type is 'expense' (money out) or 'income' (money in); amount is always positive.
+// (The array is still called "expenses", and saved under the "expenses" key, from before income existed.)
 // We start with whatever was saved last time.
 let expenses = loadExpenses();
 
@@ -202,6 +266,9 @@ let filters = loadFilters();
 
 // The monthly budget in pesos, or null
 let budget = loadBudget();
+
+// The opening balance { amount, date }, or null when it hasn't been asked yet
+let opening = loadOpening();
 
 // ===== 4. Helpers =====
 
@@ -236,6 +303,51 @@ function formatWholePeso(amount) {
   return wholePesoFormatter.format(amount);
 }
 
+// Rows: centavos only when there are some. 185 -> "₱185", 49.5 -> "₱49.50".
+function formatRowPeso(amount) {
+  return Math.round(amount * 100) % 100 === 0 ? formatWholePeso(amount) : formatPeso(amount);
+}
+
+// A money amount that can be below zero, in whole pesos: -1250 -> "−₱1,250" (a real minus sign).
+// Under ₱1 keeps the centavos, so a tiny amount doesn't show as "₱0".
+function formatBalance(amount) {
+  const size = Math.abs(amount);
+  const text = size > 0 && size < 1 ? formatPeso(size) : formatWholePeso(size);
+  return amount < 0 && text !== formatWholePeso(0) ? `−${text}` : text;
+}
+
+// Money in / out with its sign: "+₱16,200", "−₱2,849", or "₱0"
+function formatIn(amount) {
+  return amount > 0 ? `+${formatWholePeso(amount)}` : formatWholePeso(0);
+}
+function formatOut(amount) {
+  return amount > 0 ? `−${formatWholePeso(amount)}` : formatWholePeso(0);
+}
+
+// + for income, - for an expense
+function signedAmount(entry) {
+  return entry.type === 'income' ? entry.amount : -entry.amount;
+}
+
+// The balance: the opening amount plus every entry. With a month ("2026-10"): the balance at
+// the end of that month (entries up to and including it). Dates are text, so "<=" compares them.
+function balanceAt(monthKey) {
+  const start = opening ? opening.amount : 0;
+  return expenses
+    .filter((e) => !monthKey || monthOf(e) <= monthKey)
+    .reduce((sum, e) => sum + signedAmount(e), start);
+}
+
+// "Expense" / "Income", for labels
+function typeName(entry) {
+  return entry?.type === 'income' ? 'Income' : 'Expense';
+}
+
+// "Sold something" -> "sold something" (for "Income: sold something")
+function lowerFirst(text) {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
 // "2026-11-21" -> "2026-11". Because dates are YYYY-MM-DD, the month is just the first 7 characters.
 function monthOf(expense) {
   return expense.date.slice(0, 7);
@@ -245,13 +357,6 @@ function monthOf(expense) {
 function formatMonth(monthKey) {
   const [year, month] = monthKey.split('-').map(Number);
   return new Date(year, month - 1, 1).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' });
-}
-
-// The month before, e.g. "2026-01" -> "2025-12". Built from parts (local time), like the dates above.
-function previousMonth(monthKey) {
-  const [year, month] = monthKey.split('-').map(Number);
-  const date = new Date(year, month - 2, 1); // month - 1 is this month (0-based), so - 2 is last month
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
 // "2026-10" -> "October". A month from another year than now gets the year too: "October 2025".
@@ -292,16 +397,18 @@ function dayLabel(dateString) {
   });
 }
 
-// "1 expense" / "3 expenses"
+// "1 entry" / "3 entries"
 function countLabel(n) {
-  return n === 1 ? '1 expense' : `${n} expenses`;
+  return n === 1 ? '1 entry' : `${n} entries`;
 }
 
-// Does this expense pass BOTH filters? ("all" lets everything through)
-function matchesFilters(expense) {
-  const monthOk = filters.month === 'all' || monthOf(expense) === filters.month;
-  const categoryOk = filters.category === 'all' || expense.category === filters.category;
-  return monthOk && categoryOk;
+// Does this entry pass the filters? ("all" lets everything through)
+// A picked cone is an expense category, so it only lets expenses of that category through.
+function matchesFilters(entry) {
+  const monthOk = filters.month === 'all' || monthOf(entry) === filters.month;
+  const typeOk = filters.type === 'all' || entry.type === filters.type;
+  const categoryOk = filters.category === 'all' || (entry.type === 'expense' && entry.category === filters.category);
+  return monthOk && typeOk && categoryOk;
 }
 
 // The months that have at least one expense, newest first, e.g. ["2026-11", "2026-10"]
@@ -372,52 +479,66 @@ function renderList() {
   updateMonthOptions();
   renderLiveBadge();
 
-  // This month's expenses, newest first. We sort a COPY ([...expenses]) so the saved data isn't reordered.
+  // This month's entries, newest first. We sort a COPY ([...expenses]) so the saved data isn't reordered.
   // Dates are "YYYY-MM-DD" text, which sorts correctly as plain text.
   // Same date? The id starts with the time it was created, so newer ids win.
-  const monthExpenses = [...expenses]
+  const monthEntries = [...expenses]
     .filter((e) => monthOf(e) === filters.month)
     .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
 
-  // The cones are built first, because they decide whether the picked category still exists
-  renderSpeakerPanel(monthExpenses);
+  // The cones show this month's spending only (no income, no balance adjustments).
+  // They're built first, because they decide whether the picked category still exists.
+  renderSpeakerPanel(monthEntries.filter((e) => e.type === 'expense' && !isAdjustment(e)));
   renderLightbox();
 
-  // Keep only the expenses that pass the category filter. The saved data is untouched.
-  const visible = monthExpenses.filter(matchesFilters);
+  // The All | Expenses | Income switch shows the saved choice. (Each radio is ticked directly:
+  // a <fieldset>'s .elements['list-type'] is only the FIRST radio, not the group a <form> gives.)
+  for (const radio of listFilter.querySelectorAll('input[name="list-type"]')) {
+    radio.checked = radio.value === filters.type;
+  }
+
+  // Keep only the entries that pass the filters. The saved data is untouched.
+  const visible = monthEntries.filter(matchesFilters);
 
   // Group by day: one <li class="day"> per date, with a header and that day's rows.
   //   <li class="day">
-  //     <h3 class="day-header"> Today ............ ₱230.00 </h3>
+  //     <h3 class="day-header"> Today ...... +₱1,200 in  −₱230 out </h3>
   //     <ul class="day-rows"> <li class="expense">...</li> ... </ul>
   //   </li>
   let dayRows = null;
   let lastDate = null;
-  for (const expense of visible) {
-    if (expense.date !== lastDate) {
-      lastDate = expense.date;
-      const dayTotal = visible
-        .filter((e) => e.date === expense.date)
-        .reduce((sum, e) => sum + e.amount, 0);
+  for (const entry of visible) {
+    if (entry.date !== lastDate) {
+      lastDate = entry.date;
+      const sameDay = visible.filter((e) => e.date === entry.date);
+      const moneyIn = sameDay.filter((e) => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
+      const moneyOut = sameDay.filter((e) => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+
+      // The day's totals: only what isn't zero (the filter already hides the other type)
+      const totals = makeElement('span', 'day-totals', '');
+      if (moneyIn > 0) totals.append(makeElement('span', 'day-in', `+${formatRowPeso(moneyIn)} in`));
+      if (moneyOut > 0) totals.append(makeElement('span', 'day-out', `−${formatRowPeso(moneyOut)} out`));
 
       const day = makeElement('li', 'day', '');
       const header = makeElement('h3', 'day-header', '');
-      header.append(
-        makeElement('span', 'day-label', dayLabel(expense.date)),
-        makeElement('span', 'day-total', formatPeso(dayTotal))
-      );
+      header.append(makeElement('span', 'day-label', dayLabel(entry.date)), totals);
       dayRows = makeElement('ul', 'day-rows', '');
       day.append(header, dayRows);
       list.append(day);
     }
-    dayRows.append(makeExpenseRow(expense));
+    dayRows.append(makeExpenseRow(entry));
   }
 
   // Nothing to show: say why
+  const name = monthName(filters.month);
   if (expenses.length === 0) {
-    emptyMessage.textContent = 'Nothing logged yet. Tap Add expense to start.';
+    emptyMessage.textContent = 'Nothing logged yet. Tap Add to start.';
+  } else if (filters.type === 'income') {
+    emptyMessage.textContent = `No income logged in ${name}.`;
+  } else if (filters.type === 'expense') {
+    emptyMessage.textContent = `No expenses in ${name} yet.`;
   } else {
-    emptyMessage.textContent = `No expenses in ${monthName(filters.month)} yet.`;
+    emptyMessage.textContent = `Nothing logged in ${name} yet.`;
   }
   emptyMessage.hidden = visible.length > 0;
 
@@ -433,39 +554,51 @@ function renderList() {
   renderBackupStatus();
 }
 
-// One expense row. The whole row is one button: tap it to edit (or delete) in the sheet.
+// One row (an expense or income). The whole row is one button: tap it to edit (or delete) in the sheet.
 //   <li class="expense">
 //     <button class="expense-button" data-id="...">
-//       <span class="expense-dot">            (the category's color)
-//       <span class="expense-info"> title (the note, or the category), and the category under a note </span>
-//       <span class="expense-amount">
+//       <span class="expense-dot">        (expense: the category's color; income: a hollow gold ring)
+//       <span class="expense-info"> title, and a second line </span>
+//       <span class="expense-amount">     ("−₱185" or "+₱1,200")
 //     </button>
 //   </li>
-function makeExpenseRow(expense) {
+function makeExpenseRow(entry) {
+  const income = entry.type === 'income';
+  const adjustment = isAdjustment(entry);
+
   const item = makeElement('li', 'expense', '');
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'expense-button';
-  button.dataset.id = expense.id;
+  button.dataset.id = entry.id;
 
   const dot = makeElement('span', 'expense-dot', '');
-  dot.style.background = categoryColor(expense.category);
+  if (adjustment) dot.classList.add('is-adjustment');
+  else if (income) dot.classList.add('is-income');
+  else dot.style.background = categoryColor(entry.category);
 
-  // With a note: the note is the title, the category goes on the line under it.
-  // Without one: the category is the title, and there's no second line (the day header has the date).
+  // Title: the note, or (without one) the category.
+  // Second line: an expense's category (under a note); "Income: salary" for income; "Adjustment".
   // textContent (inside makeElement) shows the note exactly as typed,
   // so a note like "<b>hi</b>" can't turn into real HTML.
+  let second = '';
+  if (adjustment) second = ADJUSTMENT;
+  else if (income) second = entry.note ? `Income: ${lowerFirst(entry.category)}` : 'Income';
+  else if (entry.note) second = entry.category;
   const info = makeElement('span', 'expense-info', '');
-  info.append(makeElement('span', 'expense-title', expense.note || expense.category));
-  if (expense.note) info.append(makeElement('span', 'expense-meta', expense.category));
+  info.append(makeElement('span', 'expense-title', entry.note || entry.category));
+  if (second) info.append(makeElement('span', 'expense-meta', second));
 
-  const amount = makeElement('span', 'expense-amount', formatPeso(expense.amount));
+  const amountText = `${income ? '+' : '−'}${formatRowPeso(entry.amount)}`;
+  const amount = makeElement('span', 'expense-amount', amountText);
+  if (adjustment) amount.classList.add('is-adjustment');
+  else if (income) amount.classList.add('is-income');
 
-  // What a screen reader says for the row: "Food, ₱185.00, Jollibee lunch, today. Edit"
-  const day = dayLabel(expense.date);
+  // What a screen reader says: "Income, Salary, ₱1,200, sold old sneakers, today. Edit"
+  const day = dayLabel(entry.date);
   const when = day === 'Today' || day === 'Yesterday' ? day.toLowerCase() : day;
-  const parts = [expense.category, formatPeso(expense.amount)];
-  if (expense.note) parts.push(expense.note);
+  const parts = [typeName(entry), entry.category, formatRowPeso(entry.amount)];
+  if (entry.note) parts.push(entry.note);
   parts.push(when);
   button.setAttribute('aria-label', `${parts.join(', ')}. Edit`);
 
@@ -478,78 +611,69 @@ function makeExpenseRow(expense) {
   return item;
 }
 
-// ===== 5a. The lightbox: the chosen month's total =====
+// ===== 5a. The lightbox: the balance, and the chosen month's money in and out =====
 
 // The month the lightbox showed last time (null = not drawn yet), to spot a month switch
 let lightboxMonth = null;
 // The count-up in progress (an id from requestAnimationFrame), so a new one can stop it
 let countUpFrame = 0;
 
-// The total rolls up from ₱0 to `target` in half a second, fast at first and easing into place.
+// The balance rolls from ₱0 to `target` in half a second, fast at first and easing into place.
 // requestAnimationFrame runs the step once per screen refresh.
 function countUp(target) {
   const start = performance.now();
   const step = (now) => {
     const progress = Math.min((now - start) / 500, 1);
     const eased = 1 - (1 - progress) ** 3; // ease-out: quick start, gentle landing
-    totalEl.textContent = formatWholePeso(Math.round(target * eased));
+    totalEl.textContent = progress < 1 ? formatBalance(Math.round(target * eased)) : formatBalance(target);
     if (progress < 1) countUpFrame = requestAnimationFrame(step);
   };
   totalEl.textContent = formatWholePeso(0);
   countUpFrame = requestAnimationFrame(step);
 }
 
-// Under the total: with a budget, a bar and what's left of it;
-// without one, how the month compares with the month before (if that month has expenses).
+// The big number is the balance (all time; for an earlier month, at the end of that month).
+// Under it: the month's money in and out, and with a budget, a bar and what's left of it.
+// Adjustments are left out of "Earned / Spent" and the budget (they aren't real spending).
 function renderLightbox() {
   const month = filters.month;
-  const lastMonth = previousMonth(month);
-  const sumOf = (m) => expenses.filter((e) => monthOf(e) === m).reduce((sum, e) => sum + e.amount, 0);
+  const isCurrent = month === currentMonth();
+  const name = monthName(month);
+  const monthEntries = expenses.filter((e) => monthOf(e) === month && !isAdjustment(e));
+  const earned = monthEntries.filter((e) => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
+  const spent = monthEntries.filter((e) => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+  const balance = isCurrent ? balanceAt(null) : balanceAt(month);
 
-  totalLabel.textContent = month === currentMonth() ? 'Spent this month' : `Spent in ${monthName(month)}`;
+  totalLabel.textContent = isCurrent ? 'Balance' : `Balance at end of ${name}`;
+  earnedLabel.textContent = isCurrent ? 'Earned this month' : `Earned in ${name}`;
+  spentLabel.textContent = isCurrent ? 'Spent this month' : `Spent in ${name}`;
+  earnedEl.textContent = formatIn(earned);
+  spentEl.textContent = formatOut(spent);
 
-  const spent = sumOf(month);
   // The final number first, so fitTotal() picks the font size for it (the count-up then
   // never changes the size mid-way)
   cancelAnimationFrame(countUpFrame);
-  // Whole pesos, except a total under ₱1 (it would show "₱0" although something was spent)
-  totalEl.textContent = spent > 0 && spent < 1 ? formatPeso(spent) : formatWholePeso(spent);
+  totalEl.textContent = formatBalance(balance);
   fitTotal();
-  // Switched to another month: the total counts up to its new value. Not when the app
+  // Switched to another month: the balance counts up to its new value. Not when the app
   // opens (you want the number straight away) and not with Reduce Motion on.
   const switched = lightboxMonth !== null && lightboxMonth !== month;
   lightboxMonth = month;
-  if (switched && spent >= 1 && !prefersReducedMotion()) countUp(spent);
+  if (switched && Math.abs(balance) >= 1 && !prefersReducedMotion()) countUp(balance);
 
+  // Budget: always in pesos. Over budget stays calm: same dark ink, no red.
   budgetBox.hidden = budget === null;
   if (budget !== null) {
-    totalCompare.hidden = true;
-    // The bar: how much of the budget is used, never past full
-    const used = Math.min(spent / budget, 1);
+    const used = Math.min(spent / budget, 1); // the bar never goes past full
     budgetFill.style.width = `${used * 100}%`;
-    budgetOf.textContent = `of ${formatWholePeso(budget)}`;
-    // Whole pesos, like the total. Over budget stays calm: same dark ink, no red.
+    budgetOf.textContent = `Budget ${formatWholePeso(budget)}`;
     const left = Math.round(budget) - Math.round(spent);
     budgetLeft.textContent = left >= 0 ? `${formatWholePeso(left)} left` : `${formatWholePeso(-left)} over`;
-    return;
   }
-
-  const before = sumOf(lastMonth);
-  if (before === 0) {
-    totalCompare.hidden = true; // nothing to compare with
-    return;
-  }
-  // Compare in whole pesos, so "₱0 more" can't happen
-  const difference = Math.round(spent) - Math.round(before);
-  const name = monthName(lastMonth);
-  if (difference > 0) totalCompare.textContent = `${formatWholePeso(difference)} more than ${name}`;
-  else if (difference < 0) totalCompare.textContent = `${formatWholePeso(-difference)} less than ${name}`;
-  else totalCompare.textContent = `Same as ${name}`;
-  totalCompare.hidden = false;
 }
 
 // A huge total (₱1,250,000) must still fit on the lightbox: if it's wider than the box,
-// step the font down 72 -> 56 -> 44px. Measured after the text is set.
+// step the font down 64 -> 52 -> 40px. Measured after the text is set.
 function fitTotal() {
   const box = totalEl.parentElement;
   for (const size of ['', 'is-medium', 'is-small']) {
@@ -605,7 +729,7 @@ function percentsSummingTo100(amounts) {
   return result;
 }
 
-// Up to 4 cones: with 4 or fewer categories, one cone each; with more, the top 3 + "Rest".
+// Up to 4 cones (expenses only): with 4 or fewer categories, one cone each; with more, the top 3 + "Rest".
 // A cone is a button that shows only that category in the list ("Rest" isn't a button).
 function renderSpeakerPanel(monthExpenses) {
   cones.innerHTML = '';
@@ -672,11 +796,14 @@ function renderSpeakerPanel(monthExpenses) {
 // ===== 5c. Backup: export to a CSV file =====
 // CSV = "comma-separated values": a plain text table, one row per line, cells split by commas.
 // Excel and Google Sheets open it as a spreadsheet. Our file looks like:
-//   date,category,amount,note,id
-//   2026-10-15,Food,850.00,davids teahouse,1795202170826-wxrf
-// The id column lets the import step (next) recognise expenses it already has.
+//   date,type,category,amount,note,id
+//   2026-10-01,opening,,2500.00,,
+//   2026-10-15,expense,Food,850.00,davids teahouse,1795202170826-wxrf
+//   2026-10-16,income,Salary,16200.00,,1795202170900-abcd
+// The id column lets the import step (next) recognise entries it already has.
+// The "opening" row (full backups only) carries the opening balance, so a backup restores it too.
 
-const CSV_COLUMNS = ['date', 'category', 'amount', 'note', 'id'];
+const CSV_COLUMNS = ['date', 'type', 'category', 'amount', 'note', 'id'];
 
 // Makes one value safe to put in a CSV cell.
 function csvCell(value) {
@@ -697,14 +824,20 @@ function csvCell(value) {
   return text;
 }
 
-function expensesToCsv(list) {
+// withOpening: add the opening-balance row first (for a full backup)
+function expensesToCsv(list, withOpening) {
   // Oldest first: spreadsheets usually read top-to-bottom in time order
   const rows = [...list].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
 
   const lines = [CSV_COLUMNS.join(',')]; // the header row
+  // The amount is a plain number with 2 decimals (no ₱, no commas) so spreadsheets can add it up.
+  // It skips csvCell: it's a number we wrote ourselves, and csvCell would put a ' before a minus.
+  if (withOpening && opening) {
+    lines.push([csvCell(opening.date), 'opening', '', opening.amount.toFixed(2), '', ''].join(','));
+  }
   for (const e of rows) {
-    // amount as a plain number with 2 decimals (no ₱, no commas) so spreadsheets can add it up
-    lines.push([e.date, e.category, e.amount.toFixed(2), e.note, e.id].map(csvCell).join(','));
+    lines.push([csvCell(e.date), csvCell(e.type), csvCell(e.category), e.amount.toFixed(2),
+      csvCell(e.note), csvCell(e.id)].join(','));
   }
   // \r\n line endings are what Excel expects
   return lines.join('\r\n') + '\r\n';
@@ -734,7 +867,7 @@ function exportCsv() {
 
   // File name says what's inside: a full backup is dated today, a single month is named after the month
   const fileName = month === 'all' ? `expenses-${todayString()}.csv` : `expenses-${month}.csv`;
-  downloadTextFile(fileName, expensesToCsv(toExport), 'text/csv;charset=utf-8');
+  downloadTextFile(fileName, expensesToCsv(toExport, month === 'all'), 'text/csv;charset=utf-8');
 
   const which = month === 'all' ? 'all months' : formatMonth(month);
   backupStatus.textContent = `Exported ${countLabel(toExport.length)} (${which}) to ${fileName}.`;
@@ -788,7 +921,7 @@ function renderBackupStatus() {
 
   backupReminder.hidden = !overdue;
   if (overdue) {
-    const newOnes = unsaved === 1 ? '1 new expense' : `${unsaved} new expenses`;
+    const newOnes = unsaved === 1 ? '1 new entry' : `${unsaved} new entries`;
     backupReminder.textContent = last === null
       ? `Not backed up yet · ${countLabel(expenses.length)}`
       : `Last backup ${daysAgoText(last)} · ${newOnes}`;
@@ -867,6 +1000,16 @@ function parseImportDate(value) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
+// The opening-balance row's amount: like below, but 0 and below zero are fine ("-350.00")
+function parseImportSignedAmount(value) {
+  const text = value.trim().replace(/^'/, '');
+  const negative = /^[-−]/.test(text);
+  const cleaned = text.replace(/^[-−]/, '').replace(/^\s*PHP/i, '').replace(/[₱,\s]/g, '');
+  if (!/^\d+(\.\d+)?$/.test(cleaned)) return null;
+  const amount = Math.round(Number(cleaned) * 100) / 100;
+  return negative ? -amount : amount;
+}
+
 // Accepts "1200.50", "1,200.50", "₱1,200.50" or "PHP 1200". Returns a number > 0, or null.
 function parseImportAmount(value) {
   const cleaned = value.replace(/^\s*PHP/i, '').replace(/[₱,\s]/g, '');
@@ -896,32 +1039,47 @@ async function readImportFile(file) {
     return {
       fileName: file.name,
       items: [],
-      problems: [`Missing column(s): ${missing.join(', ')}. The first row must name the columns: date, category, amount, note.`],
+      problems: [`Missing column(s): ${missing.join(', ')}. The first row must name the columns: date, type, category, amount, note.`],
     };
   }
 
-  const categories = categoryOrder();
   const items = [];
   const problems = [];
   const seenIds = new Set();
   let otherCount = 0;
+  let fileOpening = null; // the "opening" row, if the file has one
 
   rows.slice(1).forEach((cells, index) => {
     const rowNumber = index + 2; // +2 because the header is row 1, like in a spreadsheet
     const cell = (name) => (col[name] === -1 ? '' : cells[col[name]] ?? '');
 
     const date = parseImportDate(cell('date'));
-    const amount = parseImportAmount(cell('amount'));
     if (!date) { problems.push(`Row ${rowNumber}: "${cell('date')}" is not a valid date.`); return; }
+
+    // The type: no column, or an empty cell, means expense (older backups). Any upper/lower case.
+    const typeText = cell('type').trim().toLowerCase();
+    if (typeText === 'opening') {
+      const value = parseImportSignedAmount(cell('amount'));
+      if (value === null) { problems.push(`Row ${rowNumber}: "${cell('amount')}" is not a valid opening balance.`); return; }
+      fileOpening = { amount: value, date };
+      return;
+    }
+    const type = typeText === '' ? 'expense' : typeText;
+    if (type !== 'expense' && type !== 'income') {
+      problems.push(`Row ${rowNumber}: "${cell('type')}" should be expense or income.`);
+      return;
+    }
+
+    const amount = parseImportAmount(cell('amount'));
     if (amount === null) { problems.push(`Row ${rowNumber}: "${cell('amount')}" is not a valid amount.`); return; }
 
-    // Match the category ignoring upper/lower case; unknown ones go under "Other"
-    // Old backups say "Entertainment": use its new name first, so it isn't filed under Other
+    // Match the category of that type, ignoring upper/lower case; unknown ones go under "Other".
+    // Old backups say "Entertainment": use its new name first, so it isn't filed under Other.
     let wanted = cell('category').trim().toLowerCase();
     for (const [oldName, newName] of Object.entries(RENAMED_CATEGORIES)) {
       if (wanted === oldName.toLowerCase()) wanted = newName.toLowerCase();
     }
-    let category = categories.find((c) => c.toLowerCase() === wanted);
+    let category = [...categoriesFor(type), ADJUSTMENT].find((c) => c.toLowerCase() === wanted);
     if (!category) { category = 'Other'; otherCount++; }
 
     // Undo the export's formula protection ('=... -> =...), tidy up, and respect the 200-character limit
@@ -935,10 +1093,10 @@ async function readImportFile(file) {
     if (seenIds.has(id)) { problems.push(`Row ${rowNumber}: same id as an earlier row, skipped.`); return; }
     seenIds.add(id);
 
-    items.push({ id, amount, category, date, note });
+    items.push({ id, type, amount, category, date, note });
   });
 
-  return { fileName: file.name, items, problems, otherCount };
+  return { fileName: file.name, items, problems, otherCount, opening: fileOpening };
 }
 
 // Shows what was found in the file and the choices
@@ -951,12 +1109,13 @@ function showImportPreview(result) {
   const newCount = result.items.filter((e) => !existingIds.has(e.id)).length;
   const alreadyCount = result.items.length - newCount;
 
-  if (result.items.length === 0) {
+  if (result.items.length === 0 && !result.opening) {
     importSummary.textContent = `Couldn't import anything from ${result.fileName}.`;
   } else {
     let summary = `${result.fileName}: found ${countLabel(result.items.length)} ` +
       `(${newCount} new, ${alreadyCount} already in the app).`;
     if (result.otherCount > 0) summary += ` ${result.otherCount} with an unknown category will be filed under Other.`;
+    if (result.opening) summary += ' It also has an opening balance, which "Replace all" restores.';
     if (expenses.length > 0) summary += ` "Replace all" deletes your current ${countLabel(expenses.length)} first.`;
     importSummary.textContent = summary;
   }
@@ -974,7 +1133,7 @@ function showImportPreview(result) {
   importMergeBtn.hidden = result.items.length === 0;
   importMergeBtn.disabled = newCount === 0;
   importMergeBtn.textContent = newCount === 0 ? 'Nothing new to add' : `Add ${newCount} new`;
-  importReplaceBtn.hidden = result.items.length === 0;
+  importReplaceBtn.hidden = result.items.length === 0 && !result.opening;
   importReplaceBtn.textContent = 'Replace all';
   importReplaceBtn.className = 'btn btn-danger';
   replaceArmed = false;
@@ -1000,7 +1159,7 @@ function closeImportPreview() {
   importFile.value = ''; // so picking the same file again still triggers "change"
 }
 
-// mode: "merge" = keep everything you have and add the expenses that are new;
+// mode: "merge" = keep everything you have and add the entries that are new;
 //       "replace" = throw away what you have and use exactly what's in the file.
 function applyImport(mode) {
   if (!pendingImport) return;
@@ -1014,7 +1173,12 @@ function applyImport(mode) {
     message = `Added ${countLabel(newOnes.length)} from the file.`;
   } else {
     expenses = items;
-    message = `Replaced your expenses with the ${countLabel(items.length)} from the file.`;
+    message = `Replaced your entries with the ${countLabel(items.length)} from the file.`;
+    // A full backup brings its opening balance back too
+    if (pendingImport.opening) {
+      opening = pendingImport.opening;
+      saveOpening(opening);
+    }
   }
 
   saveExpenses(expenses); // same pattern as always: change, save, redraw
@@ -1060,8 +1224,9 @@ function undoDelete() {
     saveExpenses(expenses);
     renderList();
   }
+  const restored = typeName(lastDeleted);
   lastDeleted = null;
-  showToast('Expense restored');
+  showToast(`${restored} restored`);
 }
 
 // ===== 6b. The add / edit sheet =====
@@ -1073,12 +1238,19 @@ function yesterdayString() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// Builds the category chips from CATEGORIES (once, at start-up):
-//   <input type="radio" name="category" id="cat-food" value="Food" class="visually-hidden">
-//   <label for="cat-food" class="chip">Food</label>
-function buildCategoryChips() {
-  for (const category of CATEGORIES) {
-    const id = `cat-${category.toLowerCase().replace(/\s+/g, '-')}`;
+// The type the sheet is set to ('expense' or 'income'), and each type's last picked chip
+let sheetType = 'expense';
+const lastPicked = { expense: 'Food', income: 'Allowance' };
+// Editing an "Adjustment" entry: there's no chip for it, so it keeps that category unless you pick one
+let editingAdjustment = false;
+
+// Builds the category chips for a type (again every time the type changes):
+//   <input type="radio" name="category" id="cat-expense-food" value="Food" class="visually-hidden">
+//   <label for="cat-expense-food" class="chip">Food</label>
+function buildCategoryChips(type) {
+  categoryChips.innerHTML = '';
+  for (const category of categoriesFor(type)) {
+    const id = `cat-${type}-${category.toLowerCase().replace(/\s+/g, '-')}`;
     const radio = document.createElement('input');
     radio.type = 'radio';
     radio.name = 'category';
@@ -1089,6 +1261,32 @@ function buildCategoryChips() {
     label.htmlFor = id;
     categoryChips.append(radio, label);
   }
+}
+
+// Sets the sheet to Expense or Income: the chips, the ₱ / +₱ in front of the amount, the title,
+// the buttons. The amount, date and note stay as they are.
+function setSheetType(type, category) {
+  sheetType = type;
+  form.elements.type.value = type;
+  buildCategoryChips(type);
+  const pick = category ?? lastPicked[type];
+  if (pick && categoriesFor(type).includes(pick)) form.elements.category.value = pick;
+  amountPrefix.textContent = type === 'income' ? '+₱' : '₱';
+  updateSheetTexts();
+  fitAmount();
+}
+
+function updateSheetTexts() {
+  const income = sheetType === 'income';
+  if (editingId) {
+    sheetTitle.textContent = income ? 'Edit income' : 'Edit expense';
+    submitBtn.textContent = 'Save changes';
+  } else {
+    sheetTitle.textContent = income ? 'New income' : 'New expense';
+    submitBtn.textContent = income ? 'Save income' : 'Save expense';
+  }
+  deleteBtn.textContent = income ? 'Delete income' : 'Delete expense';
+  deleteQuestion.textContent = income ? 'Delete this income?' : 'Delete this expense?';
 }
 
 // Ticks the When chip that matches a date: Today, Yesterday, or Pick a date (and shows the picker)
@@ -1137,10 +1335,12 @@ function showDeleteConfirm(show) {
 // The button that opened the sheet, so focus can go back to it when the sheet closes
 let sheetOpener = null;
 
-// Opens the sheet. With an id: edit that expense. Without: a new expense.
+// Opens the sheet. With an id: edit that entry. Without: a new one (an expense, or income
+// when the list is showing Income).
 function openSheet(id) {
   const expense = id ? expenses.find((e) => e.id === id) : null;
   editingId = expense ? expense.id : null;
+  editingAdjustment = Boolean(expense && isAdjustment(expense));
   sheetOpener = expense ? { rowId: expense.id } : { button: addBtn };
 
   form.reset();
@@ -1150,17 +1350,17 @@ function openSheet(id) {
   deleteArea.hidden = !expense;
 
   if (expense) {
-    sheetTitle.textContent = 'Edit expense';
-    submitBtn.textContent = 'Save changes';
     amountInput.value = String(expense.amount);
-    // An old category that isn't a chip any more falls back to Other
-    form.elements.category.value = CATEGORIES.includes(expense.category) ? expense.category : 'Other';
+    // An adjustment has no chip (none is ticked); any other category that isn't a chip -> Other
+    const known = categoriesFor(expense.type).includes(expense.category);
+    setSheetType(expense.type, known ? expense.category : (editingAdjustment ? null : 'Other'));
+    if (editingAdjustment) {
+      for (const radio of categoryChips.querySelectorAll('input')) radio.checked = false;
+    }
     setWhen(expense.date);
     noteInput.value = expense.note;
   } else {
-    sheetTitle.textContent = 'New expense';
-    submitBtn.textContent = 'Save expense';
-    form.elements.category.value = 'Food';
+    setSheetType(filters.type === 'income' ? 'income' : 'expense');
     setWhen(todayString());
   }
   updateNoteCount();
@@ -1507,7 +1707,7 @@ function setupSwipeToDelete() {
       const id = button.dataset.id;
       slideRow(button, -width, duration, function () {
         deleteExpense(id);
-        showToast('Expense deleted', { undo: true });
+        showToast(`${typeName(lastDeleted)} deleted`, { undo: true });
       });
     } else {
       slideRow(button, 0, 200); // not far enough: back into place
@@ -1544,16 +1744,21 @@ form.addEventListener('submit', function (event) {
   }
 
   const values = {
+    type: sheetType,
     amount,
-    category: form.elements.category.value || 'Other',
+    // No chip ticked: only possible for an adjustment, which keeps its category
+    category: form.elements.category.value || (editingAdjustment ? ADJUSTMENT : 'Other'),
     date: dateInput.value,
     note: noteInput.value.trim(),
   };
 
-  // The screen shows one month. If this expense is in another month (or a category that isn't
-  // picked), switch the screen to it, so the expense you just saved is always visible.
+  // The screen shows one month. If this entry is in another month, or the list is filtered to
+  // the other type or another category, switch so the entry you just saved is always visible.
   if (values.date.slice(0, 7) !== filters.month) filters.month = values.date.slice(0, 7);
-  if (filters.category !== 'all' && filters.category !== values.category) filters.category = 'all';
+  if (filters.type !== 'all' && filters.type !== values.type) filters.type = 'all';
+  if (filters.category !== 'all' && (values.type !== 'expense' || filters.category !== values.category)) {
+    filters.category = 'all';
+  }
   saveFilters(filters);
 
   // Same sheet, two jobs: update if we're editing, otherwise add
@@ -1567,7 +1772,7 @@ form.addEventListener('submit', function (event) {
   }
 
   closeSheet();
-  showToast(wasEditing ? 'Changes saved' : 'Expense saved');
+  showToast(wasEditing ? 'Changes saved' : `${values.type === 'income' ? 'Income' : 'Expense'} saved`);
 });
 
 // Typing in the amount clears the error as soon as it's fixed
@@ -1585,6 +1790,15 @@ function fitAmount() {
     if (amountInput.scrollWidth <= amountInput.clientWidth) return;
   }
 }
+
+// The Expense | Income switch, and remembering each type's last picked chip
+form.addEventListener('change', function (event) {
+  if (event.target.name === 'type') {
+    setSheetType(event.target.value);
+  } else if (event.target.name === 'category') {
+    lastPicked[sheetType] = event.target.value;
+  }
+});
 
 // The When chips: Today / Yesterday fill in the date; Pick a date shows the date field
 form.addEventListener('change', function (event) {
@@ -1625,10 +1839,10 @@ deleteBtn.addEventListener('click', () => showDeleteConfirm(true));
 deleteNo.addEventListener('click', () => showDeleteConfirm(false));
 deleteYes.addEventListener('click', function () {
   const id = editingId;
-  sheetOpener = { button: addBtn }; // the row is gone, so focus goes to Add expense
+  sheetOpener = { button: addBtn }; // the row is gone, so focus goes to Add
   deleteExpense(id);
   closeSheet();
-  showToast('Expense deleted', { undo: true });
+  showToast(`${typeName(lastDeleted)} deleted`, { undo: true });
 });
 
 toastUndo.addEventListener('click', function () {
@@ -1660,6 +1874,8 @@ cones.addEventListener('click', function (event) {
   const category = cone.dataset.category;
   const hadFocus = document.activeElement === cone;
   filters.category = filters.category === category ? 'all' : category;
+  // A cone is an expense category, so picking one switches the list to Expenses
+  if (filters.category !== 'all') filters.type = 'expense';
   saveFilters(filters);
   renderList();
   // The panel was rebuilt, so if the cone had keyboard focus, put it back on the same cone
@@ -1673,7 +1889,16 @@ filterClear.addEventListener('click', function () {
   renderList();
 });
 
-// The floating Add expense button opens the sheet for a new expense
+// The All | Expenses | Income switch above the list. It also clears a picked cone,
+// so the list shows exactly what the switch says.
+listFilter.addEventListener('change', function (event) {
+  filters.type = event.target.value;
+  filters.category = 'all';
+  saveFilters(filters);
+  renderList();
+});
+
+// The floating Add button opens the sheet for a new entry
 addBtn.addEventListener('click', () => openSheet(null));
 
 // ===== 7b. Backup & settings sheet =====
@@ -1682,6 +1907,11 @@ settingsBtn.addEventListener('click', function () {
   // Plain digits in the field (10000, 2500.5), so it's easy to edit
   budgetInput.value = budget === null ? '' : String(budget);
   showBudgetError(false);
+  // The current balance as a hint in the Actual balance field
+  actualBalanceInput.value = '';
+  actualBalanceInput.placeholder = String(Math.round(balanceAt(null)));
+  showFieldError(balanceField, actualBalanceInput, balanceError, false);
+  balanceStatus.textContent = '';
   showSheet(settingsSheet);
   settingsSheet.focus(); // start at the sheet, not with a focus ring on the ×
   settingsSheet.querySelector('.sheet-scroll').scrollTop = 0;
@@ -1715,6 +1945,112 @@ budgetInput.addEventListener('input', function () {
   }
   budget = value;
   renderLightbox(); // the lightbox behind the sheet updates straight away
+});
+
+// Accepts "12500", "12,500.50", "0" or "-350": like parseAmount, but 0 and below zero are allowed
+// (for a balance). Returns the number, or null.
+function parseBalance(text) {
+  const trimmed = text.trim();
+  const negative = /^[-−]/.test(trimmed);
+  const cleaned = trimmed.replace(/^[-−]/, '').replace(/[₱,\s]/g, '');
+  if (!/^(\d+(\.\d{0,2})?|\.\d{1,2})$/.test(cleaned)) return null;
+  const amount = Math.round(Number(cleaned) * 100) / 100;
+  return negative ? -amount : amount;
+}
+
+function showFieldError(field, input, error, show) {
+  error.hidden = !show;
+  field.classList.toggle('invalid', show);
+  input.setAttribute('aria-invalid', String(show));
+}
+
+// "Update": log the difference between what you really have and the app's balance
+// as an Adjustment entry (income if you have more, expense if less), dated today
+function updateActualBalance() {
+  const actual = parseBalance(actualBalanceInput.value);
+  if (actual === null) {
+    showFieldError(balanceField, actualBalanceInput, balanceError, true);
+    actualBalanceInput.focus();
+    return;
+  }
+  showFieldError(balanceField, actualBalanceInput, balanceError, false);
+  const difference = Math.round((actual - balanceAt(null)) * 100) / 100;
+  if (difference === 0) {
+    balanceStatus.textContent = 'That already matches your balance.';
+    return;
+  }
+  addExpense({
+    id: makeId(),
+    type: difference > 0 ? 'income' : 'expense',
+    amount: Math.abs(difference),
+    category: ADJUSTMENT,
+    date: todayString(),
+    note: 'Balance adjusted',
+  });
+  actualBalanceInput.value = '';
+  actualBalanceInput.placeholder = String(Math.round(balanceAt(null)));
+  balanceStatus.textContent = `Balance updated to ${formatBalance(actual)}.`;
+}
+
+balanceSaveBtn.addEventListener('click', updateActualBalance);
+// The keyboard's "done" key does the same
+actualBalanceInput.addEventListener('keydown', function (event) {
+  if (event.key === 'Enter') updateActualBalance();
+});
+actualBalanceInput.addEventListener('input', function () {
+  if (!balanceError.hidden && parseBalance(actualBalanceInput.value) !== null) {
+    showFieldError(balanceField, actualBalanceInput, balanceError, false);
+  }
+});
+
+// ===== 7c. "How much money do you have right now?" =====
+// Asked once (first launch, or the first time after income was added to the app), so the
+// balance starts right. Existing entries stay; the opening amount is worked out backwards so the
+// balance equals what you typed. Skip, or closing the sheet any other way, starts from ₱0.
+let openingAnswered = false;
+
+function askOpeningBalance() {
+  openingText.textContent = expenses.length > 0
+    ? 'Your past entries stay as they are.'
+    : 'Your balance starts from this. You can change it any time in Backup & settings.';
+  openingAmount.value = '';
+  showFieldError(openingField, openingAmount, openingError, false);
+  openingAnswered = false;
+  showSheet(openingSheet);
+  openingSheet.focus();
+}
+
+// typed: what you have now. raw: true = use it as the opening amount as is (Skip: ₱0)
+function setOpening(typed, raw) {
+  const net = expenses.reduce((sum, e) => sum + signedAmount(e), 0);
+  const amount = raw ? typed : typed - net; // so that opening + all entries = typed
+  opening = { amount: Math.round(amount * 100) / 100, date: todayString() };
+  saveOpening(opening);
+  openingAnswered = true;
+  renderLightbox();
+}
+
+openingForm.addEventListener('submit', function (event) {
+  event.preventDefault();
+  const typed = parseBalance(openingAmount.value);
+  if (typed === null) {
+    showFieldError(openingField, openingAmount, openingError, true);
+    openingAmount.focus();
+    return;
+  }
+  setOpening(typed, false);
+  dismissSheet(openingSheet);
+});
+
+openingSkip.addEventListener('click', function () {
+  setOpening(0, true);
+  dismissSheet(openingSheet);
+});
+
+// Closed without Save or Skip (Esc, a tap outside, dragged down): counts as Skip
+openingSheet.addEventListener('close', function () {
+  if (!openingAnswered) setOpening(0, true);
+  addBtn.focus({ preventScroll: true });
 });
 
 exportBtn.addEventListener('click', exportCsv);
@@ -1784,12 +2120,14 @@ if ('serviceWorker' in navigator) {
   offlineStatus.textContent = 'This browser can\'t save the app for offline use.';
 }
 
-buildCategoryChips();
 setupSheet(sheet);
 setupSheet(settingsSheet);
+setupSheet(openingSheet);
 setupSwipeToDelete();
 askToKeepStorage();
 renderList();
+// No opening balance yet: ask for it once
+if (opening === null) askOpeningBalance();
 
 // Outfit is a bit wider than the phone's own font, so measure the big total again once it has
 // loaded (and when the phone is turned), in case it now needs a smaller size.
