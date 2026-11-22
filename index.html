@@ -26,11 +26,11 @@
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Expenses">
-  <!-- "?v=13" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+  <!-- "?v=14" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
        style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
        AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
        instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=13">
+  <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
   <header class="app-header">
@@ -117,8 +117,9 @@
 
   </main>
 
-  <!-- The hand-sprayed motto. aria-hidden: it's decoration, screen readers skip it -->
-  <p class="motto" aria-hidden="true">focus on improving, not proving</p>
+  <!-- The hand-sprayed motto: a different one each day (app.js picks it from MOTTOS).
+       It's a button: tap it for another one. -->
+  <button type="button" class="motto" id="motto" aria-label="Show another motto">focus on improving, not proving</button>
 
   <!-- Shows whether the app is saved for offline use, e.g. "✓ Ready to use offline" -->
   <footer class="app-footer">
@@ -362,13 +363,53 @@
     </div>
   </dialog>
 
+  <!-- The monthly recap: shown once, the first time the app opens in a new month (if last month
+       has entries). When the month went well, a disco ball drops in. -->
+  <dialog id="recap" class="recap" tabindex="-1" aria-labelledby="recap-title">
+    <!-- The disco ball on its cord, and the specks of light it throws (decoration only) -->
+    <div class="disco" id="disco" aria-hidden="true" hidden>
+      <span class="disco-cord"></span>
+      <span class="disco-cap"></span>
+      <span class="disco-ball">
+        <span class="glint glint-1"></span>
+        <span class="glint glint-2"></span>
+        <span class="glint glint-3"></span>
+      </span>
+    </div>
+    <div class="flecks" id="flecks" aria-hidden="true"></div>
+
+    <div class="recap-content" id="recap-content">
+      <h2 id="recap-title">October, done.</h2>
+      <p class="recap-subtitle" id="recap-subtitle"></p>
+
+      <section class="lightbox recap-lightbox" aria-label="Last month">
+        <p class="lightbox-label">Kept</p>
+        <p class="lightbox-total recap-total"><strong id="recap-kept">₱0</strong></p>
+        <!-- With a budget: how much of it was spent -->
+        <div class="budget" id="recap-budget" hidden>
+          <div class="budget-track" aria-hidden="true"><div class="budget-fill" id="recap-budget-fill"></div></div>
+          <p class="budget-row">
+            <span id="recap-spent-of"></span>
+            <span id="recap-budget-of" class="budget-left"></span>
+          </p>
+        </div>
+        <p class="recap-sums" id="recap-sums"></p>
+      </section>
+
+      <p class="motto recap-motto" id="recap-motto" aria-hidden="true"></p>
+      <button type="button" class="glow-button recap-start" id="recap-start">Start November</button>
+    </div>
+  </dialog>
+
   <!-- Short messages like "Expense saved". role="status" makes screen readers read them. -->
   <div class="toast" id="toast" role="status" aria-live="polite">
+    <!-- A little spinning record, for "Expense saved" / "Income saved" / "Changes saved" -->
+    <span class="vinyl" id="toast-vinyl" aria-hidden="true" hidden></span>
     <span id="toast-text"></span>
     <button type="button" id="toast-undo" class="text-button gold" hidden>Undo</button>
   </div>
 
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=13" defer></script>
+  <script src="app.js?v=14" defer></script>
 </body>
 </html>

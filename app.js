@@ -19,6 +19,22 @@ const deleteNo = document.getElementById('delete-no');
 const toast = document.getElementById('toast');
 const toastText = document.getElementById('toast-text');
 const toastUndo = document.getElementById('toast-undo');
+const toastVinyl = document.getElementById('toast-vinyl');
+const mottoBtn = document.getElementById('motto');
+const recap = document.getElementById('recap');
+const recapTitle = document.getElementById('recap-title');
+const recapSubtitle = document.getElementById('recap-subtitle');
+const recapKept = document.getElementById('recap-kept');
+const recapBudget = document.getElementById('recap-budget');
+const recapBudgetFill = document.getElementById('recap-budget-fill');
+const recapSpentOf = document.getElementById('recap-spent-of');
+const recapBudgetOf = document.getElementById('recap-budget-of');
+const recapSums = document.getElementById('recap-sums');
+const recapMotto = document.getElementById('recap-motto');
+const recapStart = document.getElementById('recap-start');
+const recapContent = document.getElementById('recap-content');
+const disco = document.getElementById('disco');
+const flecks = document.getElementById('flecks');
 const budgetBox = document.getElementById('budget-box');
 const budgetFill = document.getElementById('budget-fill');
 const budgetOf = document.getElementById('budget-of');
@@ -357,6 +373,13 @@ function monthOf(expense) {
 function formatMonth(monthKey) {
   const [year, month] = monthKey.split('-').map(Number);
   return new Date(year, month - 1, 1).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' });
+}
+
+// The month before, e.g. "2026-01" -> "2025-12". Built from parts (local time), like the dates above.
+function previousMonth(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number);
+  const date = new Date(year, month - 2, 1); // month - 1 is this month (0-based), so - 2 is last month
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
 // "2026-10" -> "October". A month from another year than now gets the year too: "October 2025".
@@ -1383,14 +1406,23 @@ function closeSheet() {
 // ===== 6c. Toast: a short message above the Add button =====
 let toastTimer = null;
 
-// showToast('Expense saved') or showToast('Expense deleted', { undo: true })
-function showToast(message, { undo = false } = {}) {
+// showToast('Expense deleted', { undo: true }), or showToast('Expense saved', { vinyl: true })
+// for the "saved" toast with the little record that spins once
+function showToast(message, { undo = false, vinyl = false } = {}) {
   toastText.textContent = message;
   toastUndo.hidden = !undo;
+  toastVinyl.hidden = !vinyl;
+  toast.classList.toggle('has-vinyl', vinyl);
   toast.classList.add('show');
+  if (vinyl && !prefersReducedMotion()) {
+    toastVinyl.animate(
+      [{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }],
+      { duration: 900, easing: 'cubic-bezier(.3, .6, .4, 1)' }
+    );
+  }
   clearTimeout(toastTimer);
-  // 3 seconds to read it; 5 when there's an Undo to reach for
-  toastTimer = setTimeout(hideToast, undo ? 5000 : 3000);
+  // 2.6s for "saved"; 3s to read a message; 5s when there's an Undo to reach for
+  toastTimer = setTimeout(hideToast, undo ? 5000 : vinyl ? 2600 : 3000);
 }
 
 function hideToast() {
@@ -1727,6 +1759,167 @@ function setupSwipeToDelete() {
   }, true);
 }
 
+// ===== 6f. Mottos: a different one each day =====
+// Add your own to this list. One shows per day (the same one all day); tapping it shows the
+// next one for as long as the app stays open.
+const MOTTOS = [
+  'focus on improving, not proving',
+  'change is scary, staying is scarier',
+  'tell people you love them',
+];
+
+// Day of the year in local time: Jan 1 = 1, Dec 31 = 365 (or 366)
+function dayOfYear() {
+  const now = new Date();
+  return Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(now.getFullYear(), 0, 0)) / DAY_MS);
+}
+
+let mottoIndex = dayOfYear() % MOTTOS.length;
+
+function todaysMotto() {
+  return MOTTOS[dayOfYear() % MOTTOS.length];
+}
+
+function showMotto() {
+  mottoBtn.textContent = MOTTOS[mottoIndex];
+}
+
+mottoBtn.addEventListener('click', function () {
+  mottoIndex = (mottoIndex + 1) % MOTTOS.length;
+  showMotto();
+  // A quick fade-in, so the change is noticed (none with Reduce Motion)
+  if (!prefersReducedMotion()) {
+    mottoBtn.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' });
+  }
+});
+
+// ===== 6g. Monthly recap =====
+// The first time the app opens in a new month, if last month has entries: how it went.
+// Remembered in localStorage "recapSeen" (the month it was shown in), so it shows once.
+const RECAP_KEY = 'recapSeen';
+
+function loadRecapSeen() {
+  try {
+    return localStorage.getItem(RECAP_KEY);
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveRecapSeen(month) {
+  try {
+    localStorage.setItem(RECAP_KEY, month);
+  } catch (error) {
+    // can't remember it: the recap may show again next time, which is harmless
+  }
+}
+
+function maybeShowRecap() {
+  const now = currentMonth();
+  if (loadRecapSeen() === now) return;
+  saveRecapSeen(now); // once per month, whatever happens next
+  const last = previousMonth(now);
+  if (expenses.some((e) => monthOf(e) === last)) showRecap(last);
+}
+
+// Fills in and opens the recap for a month ("2026-10")
+function showRecap(month) {
+  // Like the lightbox: real money in and out, without balance adjustments
+  const entries = expenses.filter((e) => monthOf(e) === month && !isAdjustment(e));
+  const earned = entries.filter((e) => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
+  const spent = entries.filter((e) => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+  const kept = earned - spent;
+
+  recapTitle.textContent = `${monthName(month)}, done.`;
+  if (budget !== null && spent <= budget) recapSubtitle.textContent = 'You stayed under budget.';
+  else if (budget !== null) recapSubtitle.textContent = `${formatWholePeso(Math.round(spent) - Math.round(budget))} over budget.`;
+  else recapSubtitle.textContent = "Here's how it went.";
+
+  recapKept.textContent = formatBalance(kept);
+  recapBudget.hidden = budget === null;
+  if (budget !== null) {
+    recapBudgetFill.style.width = `${Math.min(spent / budget, 1) * 100}%`;
+    recapSpentOf.textContent = `Spent ${formatWholePeso(spent)}`;
+    recapBudgetOf.textContent = `of ${formatWholePeso(budget)}`;
+  }
+  recapSums.textContent = `Earned ${formatWholePeso(earned)} · Spent ${formatWholePeso(spent)}`;
+  recapMotto.textContent = todaysMotto();
+  recapStart.textContent = `Start ${monthName(currentMonth())}`;
+
+  // The disco ball only when the month went well: under budget, or (no budget) money kept
+  const good = budget !== null ? spent <= budget : kept > 0;
+  disco.hidden = !good;
+  recap.classList.toggle('has-ball', good);
+  flecks.innerHTML = '';
+
+  recap.showModal();
+  recap.focus(); // start at the recap itself (screen readers read its title), no ring on the button
+
+  // Shrink a very big "Kept" to fit, like the balance
+  const box = recapKept.parentElement;
+  for (const size of ['', 'is-medium', 'is-small']) {
+    box.classList.remove('is-medium', 'is-small');
+    if (size) box.classList.add(size);
+    if (box.scrollWidth <= box.clientWidth) break;
+  }
+
+  if (prefersReducedMotion()) return; // the ball just hangs there; no drop, no flecks, no rise
+
+  // The text and the lightbox rise in, half a second after it opens
+  recapContent.animate(
+    [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'translateY(0)' }],
+    { duration: 500, delay: 500, easing: 'cubic-bezier(0.23, 1, 0.32, 1)', fill: 'backwards' }
+  );
+  if (!good) return;
+
+  // The ball drops in from above and settles with a small bounce
+  disco.animate(
+    [
+      { transform: 'translateY(-220px)' },
+      { transform: 'translateY(8px)', offset: 0.7 },
+      { transform: 'translateY(-3px)', offset: 0.86 },
+      { transform: 'translateY(0)' },
+    ],
+    { duration: 900, easing: 'cubic-bezier(.3, .7, .3, 1)', fill: 'backwards' }
+  );
+  throwFlecks();
+}
+
+// 14 specks of light fly out from the ball once and fade: random sizes, colours and directions
+function throwFlecks() {
+  const colours = ['#f2c46e', '#ffe2b0', '#ff9a45', '#e0a458'];
+  for (let i = 0; i < 14; i++) {
+    const fleck = makeElement('span', 'fleck', '');
+    const size = 4 + Math.round(Math.random() * 3); // 4–7px
+    const colour = colours[i % colours.length];
+    fleck.style.width = `${size}px`;
+    fleck.style.height = `${size}px`;
+    fleck.style.background = colour;
+    fleck.style.boxShadow = `0 0 10px ${colour}`;
+    flecks.append(fleck);
+
+    // Spread around the ball (mostly sideways and down), 100–300px away
+    const angle = (i / 14) * Math.PI * 2 + Math.random() * 0.4;
+    const distance = 100 + Math.random() * 200;
+    const x = Math.cos(angle) * distance;
+    const y = Math.abs(Math.sin(angle)) * distance * 0.9 + 20;
+    fleck.animate(
+      [
+        { opacity: 0, transform: 'translate(-50%, 0) scale(.6)' },
+        { opacity: 1, transform: `translate(calc(-50% + ${x * 0.15}px), ${y * 0.15}px) scale(1)`, offset: 0.15 },
+        { opacity: 0, transform: `translate(calc(-50% + ${x}px), ${y}px) scale(.8)` },
+      ],
+      { duration: 2600, delay: 600 + Math.random() * 500, easing: 'cubic-bezier(.2, .7, .3, 1)', fill: 'both' }
+    );
+  }
+}
+
+recapStart.addEventListener('click', () => recap.close());
+recap.addEventListener('close', function () {
+  flecks.innerHTML = '';
+  addBtn.focus({ preventScroll: true });
+});
+
 // ===== 7. Events: react to what the user does =====
 form.addEventListener('submit', function (event) {
   // By default a form reloads the page when submitted. We stop that.
@@ -1772,7 +1965,7 @@ form.addEventListener('submit', function (event) {
   }
 
   closeSheet();
-  showToast(wasEditing ? 'Changes saved' : `${values.type === 'income' ? 'Income' : 'Expense'} saved`);
+  showToast(wasEditing ? 'Changes saved' : `${values.type === 'income' ? 'Income' : 'Expense'} saved`, { vinyl: true });
 });
 
 // Typing in the amount clears the error as soon as it's fixed
@@ -2126,8 +2319,10 @@ setupSheet(openingSheet);
 setupSwipeToDelete();
 askToKeepStorage();
 renderList();
-// No opening balance yet: ask for it once
+showMotto();
+// No opening balance yet: ask for it once. Otherwise, a new month may have a recap to show.
 if (opening === null) askOpeningBalance();
+else maybeShowRecap();
 
 // Outfit is a bit wider than the phone's own font, so measure the big total again once it has
 // loaded (and when the phone is turned), in case it now needs a smaller size.
