@@ -3,7 +3,11 @@
 Handoff spec for Matt's Expense Tracker (`index.html`, `style.css`, `app.js`, `sw.js`, `manifest.webmanifest`).
 Put this file in the repo root and ask Claude Code to implement it phase by phase.
 
-- **Mockups (canvas):** https://claude.ai/artifact/BRR1RXLQEYWsinVTmF5bCM, row 3, "After hours: home" and "After hours: add expense"
+- **Mockups (canvas):** https://claude.ai/artifact/BRR1RXLQEYWsinVTmF5bCM
+  - Phases 1–5: row 3, "After hours: home" and "After hours: add expense"
+  - Phase 6: row 5, "Balance: home" and "Balance: add expense or income"
+  - Phase 7: row 4, "After hours v3 clean" (amber cones, mottos, vinyl toast) and "Month closed under budget (disco ball)"
+  - Ignore the other rows (earlier explorations, v2's red glow, day mode).
 - **Design system:** https://claude.ai/artifact/FBH7ejWgr9SrKCKa73yr9H (tokens, component rules, logo)
 
 If this file and the mockups disagree, this file wins: it includes accessibility fixes made after the mockups.
@@ -361,5 +365,149 @@ Later polish (Phase 4) with the motion skills: drag-to-dismiss on the sheet hand
 3. **Sheet:** `<dialog>` add/edit sheet with amount field, radio chips, date chips, delete-in-sheet, toasts. Category rename + migration (§6).
 4. **Settings and budget:** settings sheet, budget, move Backup into it.
 5. **Polish:** motion (§9), then gestures (drag to close, swipe to delete) and a final review.
+6. **Balance and income:** §13. Turns the expense tracker into a money tracker: income entries, a running balance, and the Expenses / Income filter.
+7. **Extras:** §14. Amber speaker glow, rotating mottos, the vinyl "saved" toast, and the monthly recap with the disco ball.
 
 Suggested skills in Claude Code: `mobile-native` (phase 1 and 5), `emil-design-eng` (all phases), `find-animation-opportunities` + `animate` (phase 5), `gestures` (phase 5), `break-ui` (after phase 3: long notes, huge amounts, empty months), `review-animations` (end), `learn-taste` (end: record decisions back into this file).
+
+---
+
+## 13. Phase 6: Balance and income
+
+**Why:** Matt wants to see how much money he actually has, not only what he spent. Every expense takes money out, every income puts money in, and the app always shows the balance.
+
+**Mockups:** canvas row 5, "Balance: home (tap Add)" and "Balance: add expense or income". Both are clickable.
+
+**This phase changes some earlier parts:** the Lightbox content (§4), the Add button label (§4 GlowButton), the sheet header (§5) and the CSV columns (§7). Where this section and the earlier ones disagree, this section wins.
+
+### 13.1 Data
+
+- Every entry gets a `type`: `'expense'` or `'income'`. Shape: `{ id, type, amount, category, date, note }`. `amount` stays positive; `type` says which way it goes.
+- **Migration on load:** an entry with no `type` is an expense. Save once after migrating (together with §6's Entertainment rename).
+- **Income categories:** Allowance, Salary, Gift, Sold something, Other. Keep them in one `INCOME_CATEGORIES` array next to the expense list.
+- **Opening balance:** localStorage key `openingBalance` = `{ amount, date }`.
+  - First launch (no key, no entries): a small sheet asks *"How much money do you have right now?"* with a ₱ amount field, **Save** and **Skip** (Skip saves 0). Existing users with entries see the same sheet once, worded *"How much money do you have right now? Your past entries stay as they are."*, and the opening amount is back-calculated so the balance equals what they type (opening = typed − all income + all expenses).
+- **Balance** = opening amount + all income − all expenses (all time, every month).
+- **Adjust balance** (Settings, below Monthly budget): *"Actual balance"* field. Saving creates an entry `{ type: 'income' or 'expense', category: 'Adjustment', note: 'Balance adjusted' }` for the difference, so the history stays honest. Adjustment rows show in the list with the note and an `--ink-muted` amount, and are left out of the speaker panel and the budget.
+
+### 13.2 Home: the Lightbox becomes the balance
+
+```
+┌───────────────── LIGHTBOX ─────────────────┐
+│ Balance                                     │  label, --lightbox-muted
+│ ₱20,651                                     │  64px / 800 / -2.2px (was 72px)
+│ ─────────────────────────────────────────── │  1px #e3dacb rule, 16px above, 14px padding below
+│ Earned this month    Spent this month       │  2 columns, 13px --lightbox-muted labels
+│ +₱16,200             −₱2,849                │  18px / 700 values
+│ ▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░           │  4px budget bar, 12px above (expenses only)
+│ Budget ₱10,000                 ₱7,151 left  │  14px / 600; left label muted
+└─────────────────────────────────────────────┘
+```
+
+- Budget text is **always pesos, never a percent.** Over budget: right side reads "₱420 over". No budget set: hide the bar and the budget line.
+- Viewing a past month (LiveBadge): label becomes "Balance at end of October" and shows the balance as of that month's last day; the two columns read "Earned in October" / "Spent in October".
+- Balance below zero: shown as "−₱1,250" in `--lightbox-ink` (no red; the lightbox stays calm).
+- The count-up animation (§9) runs on the balance.
+- The **speaker panel shows expenses only.** Tapping a cone also sets the list filter to Expenses.
+
+### 13.3 Home: list filter and rows
+
+- **Filter**, between the speaker panel and the first day header (18px above, 14px below): a segmented control **All | Expenses | Income**.
+  - Track: 4px padding, `--radius-pill`, background #150f0d, 1px `--line` border, 3 equal columns, 4px gap.
+  - Options: 36px tall, 14px / 700. Selected: `--lightbox` background, `--lightbox-ink` text. Unselected: transparent, `--ink-muted`.
+  - Real radios (`role="radiogroup"` + `role="radio"` + `aria-checked`, or hidden radio inputs like the chips). Saved in the `filters` localStorage key as `type: 'all' | 'expense' | 'income'`, default `all`.
+  - The filter only changes the list. The lightbox and the speaker panel always show everything.
+- **Day header totals** (right side, 15px / 600, 10px gap), showing only what's non-zero and allowed by the filter:
+  - Income: "+₱1,200 in" in `--gold`
+  - Expenses: "−₱230 out" in `--ink-muted`
+- **Rows:**
+  - Expense: dot `--cat-*` (as before), amount "−₱185" in `--ink`.
+  - Income: 10px **hollow** dot (2px `--gold` border, `--ground` fill), amount "+₱1,200" in `--gold`, second line "Income: sold something".
+  - Screen-reader label starts with the type: "Income, ₱1,200, sold old sneakers, today. Edit".
+- **Empty states:** Income filter with nothing this month: "No income logged in November." Expenses: "No expenses in November yet."
+
+### 13.4 The Add button and sheet
+
+- The home GlowButton label becomes **"Add"** (plus icon kept). It opens the sheet.
+- **Type switch**, directly under the sheet title (12px above the amount field): segmented control **Expense | Income**, same style as the list filter but 40px tall, `--radius-pill`, background `--ground`.
+  - Default **Expense** for a new entry (most common). When opened while the list filter is on Income, default to Income.
+  - Switching swaps the category chips (expense list ↔ income list) and keeps the amount, date and note. Each type remembers its last picked chip (expense default Food, income default Allowance).
+- Per type:
+
+| | Expense | Income |
+|---|---|---|
+| Title | New expense | New income |
+| Amount prefix | ₱ | +₱ (no line break: `white-space: nowrap`) |
+| Chips | Food … Other | Allowance, Salary, Gift, Sold something, Other |
+| Button | Save expense | Save income |
+| Toast | Expense saved | Income saved |
+
+- Edit mode: title "Edit expense" / "Edit income", button "Save changes"; the type switch still works (to fix an entry saved as the wrong type).
+
+### 13.5 CSV backup
+
+- Columns become `date,type,category,amount,note,id`.
+- Import: a missing `type` column, or an empty cell, means `expense`. Accept `expense`/`income` in any case. Income categories match the income list; unknown ones become "Other" of that type.
+- Export the opening balance as its own row: `type = opening`, category empty, so a backup restores the balance too. Import reads it back into `openingBalance`.
+
+---
+
+## 14. Phase 7: Extras
+
+**Mockups:** canvas row 4, "After hours v3 clean" (press Play: tap Add, tap the motto) and "Month closed under budget (disco ball)" (press Play, tap Replay). **Not** v3's red glow at the top of the screen: that was dropped.
+
+### 14.1 Amber speaker glow
+
+- Add tokens: `--amber: #ff9a45` (lit ring), `--amber-track: #3a2018` (unlit ring), `--glow-cone: 0 0 8px rgba(255,130,50,.5)`.
+- Cone ring: `conic-gradient(var(--amber) 0 P%, var(--amber-track) P% 100%)`, plus `box-shadow: var(--glow-cone), inset 0 0 0 1px rgba(0,0,0,.45)`.
+- Cone centre: `radial-gradient(circle at 50% 45%, #4a2a1e 0 16%, #1a0f0b 17% 58%, #2a1710 59% 63%, #140c09 64%)`.
+- **The percentage text has no glow:** 13px / 700, `--lightbox` (#f6f1e7), no text-shadow.
+- `--gold` stays the UI accent (chips, logo ring, income). Amber is only for the lit rings.
+- Logo ring becomes 1.5px #e0a458 (warm, between gold and amber), no glow.
+
+### 14.2 Rotating mottos
+
+- List: "focus on improving, not proving", "change is scary, staying is scarier", "tell people you love them". Keep it as one `MOTTOS` array so Matt can add his own.
+- One per day: `MOTTOS[dayOfYear % MOTTOS.length]` (local date).
+- The motto is a `<button>` (44px min height, `aria-label="Show another motto"`, same Caveat Brush styling as §4). Tapping shows the next one for the rest of the session.
+
+### 14.3 Vinyl "saved" toast
+
+- After Save: the §5 toast, 44px tall, 192px wide, with a 30px record on its left (8px from the edge, 10px gap to the text):
+  - Record: `repeating-radial-gradient(circle, #0e0908 0 1.5px, #1e1512 1.5px 3px)`, `box-shadow: 0 0 10px rgba(255,130,50,.35)`.
+  - Label: 11px circle in `--amber` with a 3px `--ground` spindle hole.
+  - Spins **once**, 900ms, `cubic-bezier(.3,.6,.4,1)`. Reduced motion: no spin.
+- Toast visible about 2.6s (fade/slide in 180ms, out at the end).
+- Same toast for Expense saved, Income saved and Changes saved.
+
+### 14.4 Monthly recap (disco ball)
+
+**When:** the first time the app opens in a new month, if the previous month has at least one entry. Remember it in localStorage `recapSeen: 'YYYY-MM'` so it shows once. It's a full-screen `<dialog>` over the home screen.
+
+**Content** (390-wide reference, everything centred):
+- Title, 28px / 700: "October, done."
+- Subtitle, 16px `--ink-muted`:
+  - Budget set and expenses ≤ budget: "You stayed under budget."
+  - Budget set and over: "₱420 over budget."
+  - No budget: "Here's how it went."
+- A Lightbox (same style as home):
+  - Label "Kept" with the month's income − expenses ("₱7,300"; "−₱1,250" if negative), 64px.
+  - Bar and line: "Spent ₱2,700" left, "of ₱10,000" right (hidden with no budget).
+  - Under the bar, 13px muted: "Earned ₱10,000 · Spent ₱2,700".
+- The motto of the day under it.
+- GlowButton: "Start November" closes it. A small text button "Replay" is **not** in the app (mockup only).
+
+**The disco ball only appears in the good case** (budget set and expenses ≤ budget; with no budget, when Kept > 0). Otherwise the recap shows calmly, with no ball and no flecks.
+
+Disco ball (from the mockup):
+- Hangs from the top: 2px cord (gradient `--ground` → #6b5a4e, 96px), 8×6px cap, then a 96px ball.
+- Ball: `radial-gradient(circle at 34% 30%, #fff1d6 0 5%, #cdb08a 14%, #6e5a48 38%, #2a201b 72%, #140e0c 100%)` with a tile grid on top: two `repeating-linear-gradient`s (0deg and 90deg, rgba(10,6,5,.55) 1.5px lines every 9px). Shadow `0 0 40px rgba(224,164,88,.35)`.
+- Motion: drops in from −220px with a small bounce (900ms, `cubic-bezier(.3,.7,.3,1)`). The tiles "turn" by animating the vertical grid's background-position 0 → 72px over 4s, looping. Three small square glints (#fff4de, #f2c46e, `--amber`) twinkle, 1.4s, staggered.
+- Light flecks: 14 small squares (4–7px, colours #f2c46e #ffe2b0 #ff9a45 #e0a458, each with a matching 10px glow) drift ~100–300px and fade, 2.6s, starting 0.6–1.1s after open. They play once.
+- Text and lightbox rise in (16px, fade) at 0.5s.
+- **Reduced motion:** the ball appears in place, no flecks, no rise. Everything else the same.
+- The flecks and the ball are `aria-hidden`. The dialog is labelled by the title.
+
+### 14.5 Skills for this phase
+
+`animate` and `choreograph` (the recap entrance), `review-animations` and `animation-performance` (keep the disco at 60fps on a phone: animate only transform and opacity, plus the tile background-position on one small element), `break-ui` (negative balance, huge income, a month with only income).
