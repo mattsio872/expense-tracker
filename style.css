@@ -144,7 +144,7 @@ h2 {
 }
 
 /* =========================================================
-   3. Header: logo + name
+   3. Header: monkey patch, name, pennant
    ========================================================= */
 .app-header {
   display: flex;
@@ -157,75 +157,123 @@ h2 {
   padding: calc(16px + env(safe-area-inset-top, 0px)) var(--space-5) 0;
 }
 
-/* Icon + title side by side, centered vertically */
-.app-title {
+.brand {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  min-height: 44px;
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 25px;
-  font-weight: 600;
-  letter-spacing: -0.4px;
+  gap: 14px;
+  min-width: 0;
 }
 
-/* The monkey in a round frame with a thin gold ring.
-   The image file is 160×160, shown at 44×44, so it stays sharp on high-resolution screens */
-.app-icon {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0; /* never squash the icon if the title gets tight */
+/* The monkey as a chenille patch: a green disc, a cream then a burgundy ring, a stitched edge,
+   sewn on slightly crooked */
+.patch {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 0 2px var(--cream), 0 0 0 3.5px var(--burgundy);
+  background: radial-gradient(circle at 35% 30%, var(--green-hi), var(--green) 70%);
+  box-shadow: 0 0 0 3px var(--cream), 0 0 0 5px var(--burgundy), var(--shadow-patch);
+  transform: rotate(-6deg);
+}
+
+/* The stitching just inside the edge */
+.patch::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1.5px dashed rgba(243, 233, 210, .7);
+  border-radius: 50%;
+}
+
+/* The image file is 160×160, shown at 38×38, so it stays sharp on high-resolution screens */
+.app-icon {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   object-fit: cover;
 }
 
-/* The Live badge, top right: which month the screen shows.
-   A small lit sign: glowing red dot + warm text. An earlier month is unlit. */
-.live-badge {
-  position: relative;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: var(--ticket);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
+.brand-text {
+  min-width: 0;
 }
 
-.live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--burgundy);
-}
-
-.live-label {
-  font-size: 0.8125rem; /* 13px */
-  font-weight: 700;
-  line-height: 18px;
-  color: var(--ink);
+.app-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 25px;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.4px;
   white-space: nowrap;
 }
 
-.live-badge.is-past .live-dot {
-  background: var(--muted);
-  box-shadow: none;
-}
-
-.live-badge.is-past .live-label {
+/* On the narrowest phones it wraps onto a second line instead of running under the pennant */
+.tagline {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--muted);
-  text-shadow: none;
 }
 
-/* The real month picker: invisible, stretched over the badge (and a bit past it, so the tap
-   area is at least 44px tall). Tapping the badge = tapping the select = the phone's picker. */
+/* The pennant, top right: which month the screen shows ("NOV ’26"). A felt triangle with a
+   cream sleeve on its left edge. An earlier month turns grey. 86×44 = the tap area. */
+.pennant {
+  position: relative;
+  flex-shrink: 0;
+  width: 86px;
+  height: 44px;
+}
+
+.pennant-flag {
+  position: absolute;
+  left: 1px;
+  top: 4px;
+  width: 84px;
+  height: 36px;
+  background: var(--burgundy);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+/* The sleeve the pole goes through */
+.pennant-flag::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: var(--cream);
+}
+
+.live-label {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  font-family: var(--font-varsity);
+  font-size: 13px;
+  line-height: 1;
+  color: var(--cream);
+  white-space: nowrap;
+  transform: translateY(-50%) rotate(-2deg);
+  pointer-events: none;
+}
+
+.live-badge.is-past .pennant-flag {
+  background: var(--muted);
+}
+
+/* The real month picker: invisible, stretched over the pennant. Tapping the pennant = tapping
+   the select = the phone's own picker. */
 .live-badge select {
   position: absolute;
-  inset: -8px -4px;
+  inset: 0;
   width: auto;
   min-height: 0;
   padding: 0;
@@ -234,7 +282,7 @@ h2 {
   cursor: pointer;
 }
 
-/* The select is invisible, so show its keyboard focus ring on the badge instead */
+/* The select is invisible, so show its keyboard focus ring on the pennant instead */
 .live-badge:has(select:focus-visible) {
   outline: 3px solid var(--burgundy);
   outline-offset: 2px;
@@ -253,15 +301,18 @@ h2 {
 }
 
 /* =========================================================
-   5. Lightbox: this month's total, the one glowing thing
+   5. The ticket: balance, this month, budget (class still "lightbox")
    ========================================================= */
+/* A cream ticket in a double green frame, with a cigar band across the top */
 .lightbox {
+  position: relative; /* the poker chip sits on it */
   background: var(--ticket);
   color: var(--ink);
   border: 2px solid var(--green);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-ticket);
-  padding: 22px 22px 20px;
+  padding: 0 22px 16px;
+  margin-top: 4px;
   min-width: 0;
 }
 
@@ -269,19 +320,45 @@ h2 {
   margin: 0;
 }
 
-.lightbox-label {
-  font-size: 0.9375rem; /* 15px */
-  font-weight: 600;
+/* The cigar band: burgundy between two gold trims, with a cream label in the middle */
+.cigar-band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  margin: 0 -22px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(var(--gold) 0 2px, var(--burgundy) 2px 28px, var(--gold) 28px);
+}
+
+.cigar-band span {
+  padding: 2px 14px;
+  font-family: var(--font-varsity);
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: .5px;
+  color: var(--burgundy);
+  white-space: nowrap;
+  background: var(--ticket);
+  border: 1.5px solid var(--gold);
+  border-radius: 12px;
+}
+
+.lightbox .lightbox-label {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--muted);
 }
 
 .lightbox-total {
-  overflow: hidden;      /* app.js measures this box to shrink a very long total */
+  overflow: hidden;      /* app.js measures this box to shrink a very long balance */
   white-space: nowrap;
 }
 
+/* inline-block: as wide as the number, so app.js can tell whether the poker chip fits beside it */
 #total {
-  display: block;
+  display: inline-block;
   font-family: var(--font-serif);
   font-size: 62px;
   line-height: 1;
@@ -294,18 +371,58 @@ h2 {
 .lightbox-total.is-medium #total { font-size: 50px; letter-spacing: -1.6px; }
 .lightbox-total.is-small #total  { font-size: 40px; letter-spacing: -1.2px; }
 
-/* "Earned this month  +₱16,200 | Spent this month  −₱2,849", under a thin rule */
+/* The poker chip: burgundy and cream edge, a burgundy middle with a stitched ring and
+   "UNDER BUDGET". It sits on the ticket's right, tilted. */
+.poker-chip {
+  position: absolute;
+  right: 12px;
+  top: 46px;
+  display: grid;
+  place-items: center;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(var(--burgundy) 0 22.5deg, var(--cream) 22.5deg 45deg);
+  box-shadow: 0 6px 12px rgba(60, 20, 20, .3);
+  transform: rotate(12deg);
+}
+
+.poker-chip-inner {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--burgundy);
+}
+
+.poker-chip-inner span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1.5px dashed rgba(243, 233, 210, .7);
+  border-radius: 50%;
+  font-family: var(--font-varsity);
+  font-size: 8px;
+  line-height: 1.15;
+  text-align: center;
+  color: var(--cream);
+}
+
+/* "Earned this month  +₱16,200 | Spent this month  −₱2,849", under a dashed tear line */
 .lightbox-month {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-3);
-  margin-top: var(--space-4);
-  padding-top: 14px;
-  border-top: 1px solid var(--tan-surface);
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--line-strong);
 }
 
 .month-col-label {
-  font-size: 0.8125rem; /* 13px */
+  font-size: 12px;
+  font-weight: 600;
   line-height: 18px;
   color: var(--muted);
 }
@@ -320,14 +437,23 @@ h2 {
   white-space: nowrap;
 }
 
-/* With a budget: a thin bar of how much is spent, then "Budget ₱10,000 ...... ₱7,151 left" */
+#earned {
+  color: var(--green);
+}
+
+/* With a budget: a thin bar of how much is spent, then "₱7,151 left of ₱10,000" beside it */
 .budget {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   margin-top: var(--space-3);
 }
 
 .budget-track {
-  height: 4px;
-  border-radius: var(--radius-pill);
+  flex: 1;
+  min-width: 40px;
+  height: 6px;
+  border-radius: 3px;
   background: var(--tan-surface);
   overflow: hidden; /* rounds the fill's ends */
 }
@@ -335,22 +461,19 @@ h2 {
 .budget-fill {
   height: 100%;
   width: 0;
-  border-radius: var(--radius-pill);
+  border-radius: 3px;
   background: var(--green);
 }
 
 .budget-row {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-top: var(--space-2) !important;
-  font-size: 0.875rem; /* 14px */
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
+  white-space: nowrap;
 }
 
-/* "₱7,151 left" / "₱420 over": the dark ink, never red (the lightbox stays calm) */
+/* "₱7,151 left" / "₱420 over": ink, never red (the ticket stays calm) */
 .budget-left {
   font-weight: 700;
   color: var(--ink);
@@ -640,91 +763,133 @@ select {
 }
 
 /* =========================================================
-   8. Speaker panel: the month's biggest categories as cones
+   8. "Now spinning": a record whose label is the month's spending, and its legend
    ========================================================= */
-/* A walnut speaker cabinet: warm wood gradient with a light top edge */
 .speaker-panel {
-  background: linear-gradient(135deg, var(--green-hi), var(--green) 60%);
-  border-radius: var(--radius-md);
-  padding: 16px 14px 14px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: 2px;
 }
 
-/* Four equal columns. minmax(0, 1fr) lets a long label shrink (with "…") instead of widening the panel */
-.cones {
+/* The record: fine grooves, one faint ring, a soft shine on top */
+.record {
+  position: relative;
+  flex-shrink: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  place-items: center;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 30%, rgba(255, 255, 255, .06) 31%, transparent 32%),
+    repeating-radial-gradient(circle, #121212 0 1.5px, var(--groove) 1.5px 3px);
+  box-shadow: var(--shadow-record);
 }
 
-/* One cone + its label. It's a <button> (tap to filter), so reset the button look first */
-.cone {
+.record::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .14), transparent 40%, transparent 60%, rgba(255, 255, 255, .08));
+  pointer-events: none;
+}
+
+/* The label: a pie of the categories (app.js sets the conic-gradient), with a cream edge */
+.record-label {
+  position: relative;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: var(--tan);
+  box-shadow: 0 0 0 2px var(--cream);
+}
+
+/* The spindle hole */
+.record-label::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+.spinning {
+  flex: 1;
+  min-width: 0;
+}
+
+.spinning-title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.spin-list {
   display: flex;
   flex-direction: column;
+}
+
+/* One legend row: dot, name, percent. Category rows are buttons (tap to filter the list) */
+.spin-row {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
+  gap: var(--space-2);
+  width: 100%;
   min-height: var(--tap);
-  padding: 4px 0;
+  padding: 0;
   font: inherit;
   color: inherit;
+  text-align: left;
   background: none;
   border: 0;
   border-radius: var(--radius-md); /* so the keyboard focus ring is rounded */
 }
 
-button.cone {
+button.spin-row {
   cursor: pointer;
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
-  transition: transform 100ms var(--ease-out);
 }
 
-button.cone:active {
-  transform: scale(0.97);
-}
-
-/* The lit ring: glowing amber from 0 up to the percent (--p, set by app.js), unlit after it,
-   like the light ring on a speaker */
-.cone-ring {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
+.spin-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: conic-gradient(var(--gold) 0 var(--p, 0%), rgba(243, 233, 210, .18) var(--p, 0%) 100%);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35);
+  box-shadow: inset 0 0 0 1px rgba(27, 34, 51, .4);
 }
 
-/* The speaker cone itself, with the percent printed on its dust cap */
-.cone-cap {
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 45%, #2a3b31 0 16%, #14231b 17% 58%, #1d2f25 59% 63%, #10201a 64%);
-  color: var(--cream);
-  font-size: 0.8125rem; /* 13px */
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-/* The picked cone (the list shows only this category) gets a gold ring around it */
-.cone[aria-pressed="true"] .cone-ring {
-  outline: 2px solid var(--cream);
-  outline-offset: 3px;
-}
-
-.cone-label {
-  max-width: 100%;
-  font-size: 0.75rem; /* 12px */
+.spin-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 16px;
-  color: var(--cream);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.spin-pct {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The picked category: burgundy name, underlined */
+.spin-row[aria-pressed="true"] .spin-name {
+  color: var(--burgundy);
+  text-decoration: underline 2px;
+  text-underline-offset: 3px;
 }
 
 /* =========================================================
@@ -783,6 +948,9 @@ button.cone:active {
   margin: 0;
   padding: var(--space-6) 0;
   text-align: center;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 18px;
   color: var(--muted);
 }
 
@@ -818,7 +986,7 @@ button.cone:active {
   font-weight: 500;
 }
 
-/* "+₱1,200 in   −₱230 out" on the right of a day header. With huge amounts on a narrow phone
+/* "+₱1,200 earned   −₱230 spent" on the right of a day header. With huge amounts on a narrow phone
    the two parts wrap onto two lines (each part itself never breaks). */
 .day-totals {
   display: flex;
@@ -826,8 +994,8 @@ button.cone:active {
   justify-content: flex-end;
   column-gap: 10px;
   min-width: 0;
-  font-size: 0.9375rem; /* 15px */
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -877,11 +1045,11 @@ button.cone:active {
 
 .expense-button {
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
   column-gap: var(--space-3);
   align-items: center;
   width: 100%;
-  min-height: 62px;
+  min-height: 54px;
   padding: var(--space-2) 0;
   font: inherit;
   color: inherit;
@@ -902,22 +1070,21 @@ button.cone:active {
   background: var(--ticket);
 }
 
+/* A 9px dot with a thin dark outline: the category's colour, gold for income,
+   tan for a balance adjustment */
 .expense-dot {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(27, 34, 51, .4);
 }
 
-/* Income: a hollow gold ring instead of a filled category dot */
 .expense-dot.is-income {
-  background: var(--paper);
-  border: 2px solid var(--gold);
+  background: var(--gold);
 }
 
-/* A balance adjustment: a quiet hollow ring */
 .expense-dot.is-adjustment {
-  background: var(--paper);
-  border: 2px solid var(--muted);
+  background: var(--tan-surface);
 }
 
 .expense-info {
@@ -1014,9 +1181,34 @@ button.cone:active {
   outline-offset: 2px;
 }
 
-/* Above the list: 14px of air under it */
+/* Above the list: plain text tabs on an ink rule; the picked one gets a burgundy underline */
 .segmented-list {
-  margin-bottom: 14px;
+  display: flex;
+  gap: 18px;
+  margin: 0 0 14px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-bottom: 1.5px solid var(--ink);
+  border-radius: 0;
+}
+
+.segmented-list label {
+  height: auto;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  margin-bottom: -1.5px; /* the underline sits on top of the rule */
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--muted);
+  border-radius: 0;
+  border-bottom: 3px solid transparent;
+}
+
+.segmented-list input:checked + label {
+  background: none;
+  color: var(--ink);
+  border-bottom-color: var(--burgundy);
 }
 
 /* In the sheet, under the title: a bit taller, on the darker ground */
@@ -1181,19 +1373,36 @@ button.cone:active {
 /* =========================================================
    11. Motto + footer
    ========================================================= */
-/* Hand-sprayed on the wall: decoration, so it uses the faint ink */
+/* The motto on a small note, taped under the list, a little crooked */
 .motto {
+  position: relative;
   display: block;
+  width: 210px;
+  max-width: calc(100% - 40px);
   min-height: var(--tap);
-  margin: 14px auto 0;
-  padding: 0 var(--space-5);
-  max-width: 480px;
+  margin: 28px auto 0;
+  padding: 14px 14px 10px;
   text-align: center;
   font-family: var(--font-hand);
   font-size: 22px;
-  line-height: 28px;
-  color: var(--muted);
-  transform: rotate(-2deg);
+  line-height: 1.1;
+  color: var(--ink);
+  background: var(--note);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .12);
+  transform: rotate(-2.5deg);
+}
+
+/* The piece of tape holding it up */
+.motto::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 64px;
+  height: 18px;
+  margin-left: -32px;
+  background: var(--tape);
+  transform: rotate(3deg);
 }
 
 /* The home-screen motto is a button (tap for another one): no button look */
@@ -1267,8 +1476,10 @@ button.motto {
   height: 58px;
   padding: 0 var(--space-6);
   font: inherit;
-  font-size: 1.125rem; /* 18px */
-  font-weight: 700;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 21px;
+  font-weight: 600;
   color: var(--cream);
   background: var(--green);
   border: 0;
@@ -1283,6 +1494,24 @@ button.motto {
 
 .glow-button:active {
   transform: scale(0.97);
+}
+
+/* The gold star before the label: a star-shaped mask filled with gold (CSS, so app.js can
+   keep setting the button's text) */
+.glow-button::before {
+  content: "";
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  background: var(--gold);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m12 2 2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m12 2 2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* Green buttons show their keyboard focus in cream */
+.glow-button:focus-visible {
+  outline-color: var(--cream);
+  outline-offset: -8px;
 }
 
 /* left + right + max-width + margin: auto = full width on a phone, centred on a big screen */
@@ -1637,6 +1866,7 @@ html:has(.recap[open]) {
 }
 
 .recap-lightbox {
+  padding-top: 18px; /* no cigar band here yet */
   text-align: left;
 }
 
@@ -1757,7 +1987,7 @@ html:has(.recap[open]) {
    ========================================================= */
 @media (prefers-reduced-motion: reduce) {
   .btn,
-  button.cone,
+  button.spin-row,
   .glow-button,
   .icon-button,
   .chip,
@@ -1772,7 +2002,7 @@ html:has(.recap[open]) {
     opacity: .8;
   }
   .btn:active:not(:disabled),
-  button.cone:active,
+  button.spin-row:active,
   .glow-button:active,
   .icon-button:active,
   .chip:active {

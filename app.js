@@ -77,6 +77,8 @@ const filterText = document.getElementById('filter-text');
 const filterClear = document.getElementById('filter-clear');
 const speakerPanel = document.getElementById('speaker-panel');
 const cones = document.getElementById('cones');
+const recordLabel = document.getElementById('record-label');
+const pokerChip = document.getElementById('poker-chip');
 const addBtn = document.getElementById('add-btn');
 const exportMonth = document.getElementById('export-month');
 const exportBtn = document.getElementById('export-btn');
@@ -472,11 +474,11 @@ function updateMonthOptions() {
   fillMonthSelect(exportMonth, months, exportChoice, true);
 }
 
-// The badge's visible text and look. The current month is "live" (glowing red dot);
-// an earlier month is shown plainly as "Oct 2026".
+// The pennant's label, "NOV ’26", for every month. Any month that isn't the current one turns
+// the pennant grey, so it's clear you're looking back.
 function renderLiveBadge() {
   const isLive = filters.month === currentMonth();
-  liveLabel.textContent = isLive ? `Live: ${formatMonthShort(filters.month)}` : formatMonth(filters.month);
+  liveLabel.textContent = `${formatMonthShort(filters.month).toUpperCase()} ’${filters.month.slice(2, 4)}`;
   liveBadge.classList.toggle('is-past', !isLive);
   filterMonth.setAttribute('aria-label', `Month: ${monthNameWithYear(filters.month)}`);
 }
@@ -525,7 +527,7 @@ function renderList() {
 
   // Group by day: one <li class="day"> per date, with a header and that day's rows.
   //   <li class="day">
-  //     <h3 class="day-header"> Today ...... +₱1,200 in  −₱230 out </h3>
+  //     <h3 class="day-header"> Today ...... +₱1,200 earned  −₱230 spent </h3>
   //     <ul class="day-rows"> <li class="expense">...</li> ... </ul>
   //   </li>
   let dayRows = null;
@@ -539,8 +541,8 @@ function renderList() {
 
       // The day's totals: only what isn't zero (the filter already hides the other type)
       const totals = makeElement('span', 'day-totals', '');
-      if (moneyIn > 0) totals.append(makeElement('span', 'day-in', `+${formatRowPeso(moneyIn)} in`));
-      if (moneyOut > 0) totals.append(makeElement('span', 'day-out', `−${formatRowPeso(moneyOut)} out`));
+      if (moneyIn > 0) totals.append(makeElement('span', 'day-in', `+${formatRowPeso(moneyIn)} earned`));
+      if (moneyOut > 0) totals.append(makeElement('span', 'day-out', `−${formatRowPeso(moneyOut)} spent`));
 
       const day = makeElement('li', 'day', '');
       const header = makeElement('h3', 'day-header', '');
@@ -678,6 +680,8 @@ function renderLightbox() {
   cancelAnimationFrame(countUpFrame);
   totalEl.textContent = formatBalance(balance);
   fitTotal();
+  // Measured now, while the final number is showing (before any count-up)
+  updatePokerChip(budget !== null && spent <= budget);
   // Switched to another month: the balance counts up to its new value. Not when the app
   // opens (you want the number straight away) and not with Reduce Motion on.
   const switched = lightboxMonth !== null && lightboxMonth !== month;
@@ -689,9 +693,43 @@ function renderLightbox() {
   if (budget !== null) {
     const used = Math.min(spent / budget, 1); // the bar never goes past full
     budgetFill.style.width = `${used * 100}%`;
-    budgetOf.textContent = `Budget ${formatWholePeso(budget)}`;
+    // "₱7,151 left of ₱10,000" / "₱420 over of ₱10,000"
+    budgetOf.textContent = ` of ${formatWholePeso(budget)}`;
     const left = Math.round(budget) - Math.round(spent);
     budgetLeft.textContent = left >= 0 ? `${formatWholePeso(left)} left` : `${formatWholePeso(-left)} over`;
+  }
+}
+
+// The poker chip ("UNDER BUDGET") shows when the month is under budget, but never over the
+// balance: if the balance had to shrink, or is too wide to leave room beside it, the chip
+// stays hidden (the budget line says the same thing in words). It pops in the first time it
+// appears in a session.
+let pokerChipPopped = false;
+
+function updatePokerChip(underBudget) {
+  let show = underBudget;
+  if (show) {
+    const box = totalEl.parentElement;
+    const shrunk = box.classList.contains('is-medium') || box.classList.contains('is-small');
+    // Where the chip would start (it's 66px wide, 12px inside the ticket's 2px border), and
+    // where the number ends: keep at least 6px between them
+    const ticket = totalEl.closest('.lightbox').getBoundingClientRect();
+    const chipLeft = ticket.right - 2 - 12 - 66;
+    show = !shrunk && totalEl.getBoundingClientRect().right + 6 <= chipLeft;
+  }
+  pokerChip.hidden = !show;
+  if (show && !pokerChipPopped) {
+    pokerChipPopped = true;
+    if (!prefersReducedMotion()) {
+      pokerChip.animate(
+        [
+          { transform: 'rotate(12deg) scale(.6)', opacity: 0 },
+          { transform: 'rotate(12deg) scale(1.08)', opacity: 1, offset: 0.7 },
+          { transform: 'rotate(12deg) scale(1)', opacity: 1 },
+        ],
+        { duration: 300, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }
+      );
+    }
   }
 }
 
@@ -752,8 +790,29 @@ function percentsSummingTo100(amounts) {
   return result;
 }
 
-// Up to 4 cones (expenses only): with 4 or fewer categories, one cone each; with more, the top 3 + "Rest".
-// A cone is a button that shows only that category in the list ("Rest" isn't a button).
+// "Now spinning" (expenses only): up to 4 slots. With 4 or fewer categories, one each; with more,
+// the top 3 + "Rest". The record's label is a pie of them, and the legend lists them; a legend row
+// is a button that shows only that category in the list ("Rest" isn't a button).
+// Slots are coloured by rank (1st green, 2nd burgundy, 3rd gold, 4th tan), not by category.
+const RANK_COLOURS = ['var(--rank-1)', 'var(--rank-2)', 'var(--rank-3)', 'var(--rank-4)'];
+let recordSpun = false; // the record turns once, the first time it's drawn in a session
+
+// The label's pie: one slice per slot, with a thin cream gap after each. While a category is
+// picked, the other slices fade (mixed 35% with cream).
+function recordGradient(slots, percents) {
+  const stops = [];
+  let start = 0;
+  slots.forEach((slot, i) => {
+    const end = start + percents[i];
+    const faded = filters.category !== 'all' && slot.category !== filters.category;
+    const colour = faded ? `color-mix(in srgb, ${RANK_COLOURS[i]} 35%, var(--cream))` : RANK_COLOURS[i];
+    const sliceEnd = Math.max(start, end - 0.6);
+    stops.push(`${colour} ${start}% ${sliceEnd}%`, `var(--cream) ${sliceEnd}% ${end}%`);
+    start = end;
+  });
+  return `conic-gradient(${stops.join(', ')})`;
+}
+
 function renderSpeakerPanel(monthExpenses) {
   cones.innerHTML = '';
   speakerPanel.hidden = monthExpenses.length === 0;
@@ -778,6 +837,17 @@ function renderSpeakerPanel(monthExpenses) {
   }
 
   const percents = slots.length ? percentsSummingTo100(slots.map((s) => s.amount)) : [];
+  if (slots.length) {
+    recordLabel.style.background = recordGradient(slots, percents);
+    // The first time: the record turns once (the label is what you see turn)
+    if (!recordSpun && !speakerPanel.hidden) {
+      recordSpun = true;
+      if (!prefersReducedMotion()) {
+        recordLabel.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }],
+          { duration: 1200, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+      }
+    }
+  }
   slots.forEach((slot, i) => {
     const percent = percents[i];
     const name = slot.category ?? 'Rest';
@@ -786,7 +856,7 @@ function renderSpeakerPanel(monthExpenses) {
     const percentSpoken = percent === 0 ? 'less than 1 percent' : `${percent} percent`;
 
     const cone = document.createElement(slot.category ? 'button' : 'div');
-    cone.className = 'cone';
+    cone.className = 'spin-row';
     if (slot.category) {
       const picked = filters.category === slot.category;
       cone.type = 'button';
@@ -800,18 +870,14 @@ function renderSpeakerPanel(monthExpenses) {
       cone.setAttribute('aria-label', `Rest, ${percentSpoken}`);
     }
 
-    // The gold ring is a conic-gradient: gold from 0 to the percent, dark track after it.
-    // The --p variable carries the percent into the CSS.
-    const ring = makeElement('span', 'cone-ring', '');
-    ring.style.setProperty('--p', `${percent}%`);
-    const cap = makeElement('span', 'cone-cap', percentText);
-    ring.append(cap);
-    ring.setAttribute('aria-hidden', 'true');
+    // A legend row: the slot's colour, the name, the percent. (The aria-label above says it all.)
+    const dot = makeElement('span', 'spin-dot', '');
+    dot.style.background = RANK_COLOURS[i];
+    const label = makeElement('span', 'spin-name', name);
+    const pct = makeElement('span', 'spin-pct', percentText);
+    for (const part of [dot, label, pct]) part.setAttribute('aria-hidden', 'true');
 
-    const label = makeElement('span', 'cone-label', name);
-    label.setAttribute('aria-hidden', 'true');
-
-    cone.append(ring, label);
+    cone.append(dot, label, pct);
     cones.append(cone);
   });
 }
@@ -2326,7 +2392,7 @@ showMotto();
 if (opening === null) askOpeningBalance();
 else maybeShowRecap();
 
-// Outfit is a bit wider than the phone's own font, so measure the big total again once it has
-// loaded (and when the phone is turned), in case it now needs a smaller size.
-document.fonts?.ready.then(fitTotal);
-window.addEventListener('resize', fitTotal);
+// The web fonts are a bit wider than the phone's own, so measure the balance again once they've
+// loaded (and when the phone is turned): it may need a smaller size, or no room for the poker chip.
+document.fonts?.ready.then(renderLightbox);
+window.addEventListener('resize', renderLightbox);
