@@ -33,6 +33,7 @@ const recapSums = document.getElementById('recap-sums');
 const recapMotto = document.getElementById('recap-motto');
 const recapStart = document.getElementById('recap-start');
 const recapContent = document.getElementById('recap-content');
+const recapChip = document.getElementById('recap-chip');
 const disco = document.getElementById('disco');
 const flecks = document.getElementById('flecks');
 const budgetBox = document.getElementById('budget-box');
@@ -706,17 +707,19 @@ function renderLightbox() {
 // appears in a session.
 let pokerChipPopped = false;
 
+// Does the poker chip fit beside a ticket's big number? Not if the number had to shrink, and
+// only with at least 6px between the number's end and where the chip starts (the chip is 66px
+// wide, 12px inside the ticket's 2px border). Used by the home ticket and the recap's.
+function chipFits(numberEl) {
+  const box = numberEl.parentElement;
+  if (box.classList.contains('is-medium') || box.classList.contains('is-small')) return false;
+  const ticket = numberEl.closest('.lightbox').getBoundingClientRect();
+  const chipLeft = ticket.right - 2 - 12 - 66;
+  return numberEl.getBoundingClientRect().right + 6 <= chipLeft;
+}
+
 function updatePokerChip(underBudget) {
-  let show = underBudget;
-  if (show) {
-    const box = totalEl.parentElement;
-    const shrunk = box.classList.contains('is-medium') || box.classList.contains('is-small');
-    // Where the chip would start (it's 66px wide, 12px inside the ticket's 2px border), and
-    // where the number ends: keep at least 6px between them
-    const ticket = totalEl.closest('.lightbox').getBoundingClientRect();
-    const chipLeft = ticket.right - 2 - 12 - 66;
-    show = !shrunk && totalEl.getBoundingClientRect().right + 6 <= chipLeft;
-  }
+  const show = underBudget && chipFits(totalEl);
   pokerChip.hidden = !show;
   if (show && !pokerChipPopped) {
     pokerChipPopped = true;
@@ -806,7 +809,8 @@ function recordGradient(slots, percents) {
     const end = start + percents[i];
     const faded = filters.category !== 'all' && slot.category !== filters.category;
     const colour = faded ? `color-mix(in srgb, ${RANK_COLOURS[i]} 35%, var(--cream))` : RANK_COLOURS[i];
-    const sliceEnd = Math.max(start, end - 0.6);
+    // (one category = one whole slice: no gap, or it would look like a clock hand)
+    const sliceEnd = slots.length === 1 ? end : Math.max(start, end - 0.6);
     stops.push(`${colour} ${start}% ${sliceEnd}%`, `var(--cream) ${sliceEnd}% ${end}%`);
     start = end;
   });
@@ -1908,8 +1912,9 @@ function showRecap(month) {
   recapBudget.hidden = budget === null;
   if (budget !== null) {
     recapBudgetFill.style.width = `${Math.min(spent / budget, 1) * 100}%`;
+    // "Spent ₱2,700 of ₱10,000"
     recapSpentOf.textContent = `Spent ${formatWholePeso(spent)}`;
-    recapBudgetOf.textContent = `of ${formatWholePeso(budget)}`;
+    recapBudgetOf.textContent = ` of ${formatWholePeso(budget)}`;
   }
   recapSums.textContent = `Earned ${formatWholePeso(earned)} · Spent ${formatWholePeso(spent)}`;
   recapMotto.textContent = todaysMotto();
@@ -1931,6 +1936,8 @@ function showRecap(month) {
     if (size) box.classList.add(size);
     if (box.scrollWidth <= box.clientWidth) break;
   }
+  // The poker chip on the recap's ticket: under budget, and room beside "Kept"
+  recapChip.hidden = !(budget !== null && spent <= budget && chipFits(recapKept));
 
   if (prefersReducedMotion()) return; // the ball just hangs there; no drop, no flecks, no rise
 
@@ -1956,7 +1963,7 @@ function showRecap(month) {
 
 // 14 specks of light fly out from the ball once and fade: random sizes, colours and directions
 function throwFlecks() {
-  const colours = ['#f2c46e', '#ffe2b0', '#ff9a45', '#e0a458'];
+  const colours = ['#d9b35e', '#f3e9d2', '#e8c676', '#ffffff'];
   for (let i = 0; i < 14; i++) {
     const fleck = makeElement('span', 'fleck', '');
     const size = 4 + Math.round(Math.random() * 3); // 4–7px
