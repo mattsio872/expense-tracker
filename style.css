@@ -491,11 +491,11 @@ h2 {
 .field label,
 .chip-group legend {
   display: block;
-  font-weight: 600;
-  font-size: 0.9375rem; /* 15px */
+  font-weight: 700;
+  font-size: 14px;
   line-height: 20px;
   margin-bottom: var(--space-2);
-  color: var(--ink);
+  color: var(--muted);
 }
 
 /* The "195 / 200" character counter under the note (only near the limit) */
@@ -536,12 +536,37 @@ input::placeholder {
 }
 
 /* The amount: a lit panel, like the total on the home screen */
+/* The amount: a small ticket in a double green frame, with a cigar band on top */
 .amount-field {
   background: var(--ticket);
   color: var(--ink);
   border: 2px solid var(--green);
   border-radius: var(--radius-sm);
-  padding: 14px 18px 10px;
+  box-shadow: var(--shadow-ticket);
+  padding: 0 18px 12px;
+  margin: 6px 5px 0; /* room for the outer frame */
+}
+
+/* The band: 26px, burgundy for an expense, green for income (and on the opening sheet) */
+.amount-field .amount-band {
+  height: 26px;
+  margin: 0 -18px 6px;
+  background: linear-gradient(var(--gold) 0 2px, var(--burgundy) 2px 24px, var(--gold) 24px);
+}
+
+#expense-form[data-type="income"] .amount-band,
+.amount-band.band-green {
+  background: linear-gradient(var(--gold) 0 2px, var(--green) 2px 24px, var(--gold) 24px);
+}
+
+#expense-form[data-type="income"] .amount-band span,
+.amount-band.band-green span {
+  color: var(--green);
+}
+
+/* Income amounts are green, like income everywhere else */
+#expense-form[data-type="income"] #amount {
+  color: var(--green);
 }
 
 .amount-field label {
@@ -597,13 +622,14 @@ input::placeholder {
 /* Focus ring on the panel while you type the amount */
 .amount-field:focus-within {
   outline: 3px solid var(--burgundy);
-  outline-offset: 2px;
+  outline-offset: 8px; /* outside the double frame */
 }
 
 /* Not a valid amount: red edge + the message under it */
+/* Not a valid amount: the frame turns red */
 .amount-field.invalid {
   border-color: var(--danger);
-  box-shadow: 0 0 0 1px var(--danger);
+  box-shadow: 0 0 0 4px var(--ticket), 0 0 0 6px var(--danger);
 }
 
 .field-error {
@@ -638,11 +664,11 @@ input::placeholder {
   height: 40px;
   margin: 2px 0; /* 40px chip + 2px above and below = a 44px tall tap row */
   padding: 0 14px;
-  font-size: 0.9375rem; /* 15px */
+  font-size: 15px;
   font-weight: 600;
   color: var(--ink);
-  border: 1px solid var(--control-line);
-  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--control-line);
+  border-radius: var(--radius-md);
   cursor: pointer;
   touch-action: manipulation;
   user-select: none;
@@ -655,10 +681,31 @@ input::placeholder {
 }
 
 /* The picked chip: gold with dark text. ":checked + .chip" = the label right after a ticked radio */
+/* The picked chip: green felt with a dashed cream stitch just inside its edge.
+   An expense category is burgundy felt instead. */
 input:checked + .chip {
   background: var(--green);
-  border-color: var(--green);
+  border: 1.5px dashed rgba(243, 233, 210, .7);
+  box-shadow: 0 0 0 2px var(--green);
   color: var(--cream);
+}
+
+#expense-form[data-type="expense"] #category-chips input:checked + .chip {
+  background: var(--burgundy);
+  box-shadow: 0 0 0 2px var(--burgundy);
+}
+
+/* The note: no box, just a line to write on */
+#note {
+  min-height: var(--tap);
+  padding: 4px 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 19px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px solid var(--ink);
+  border-radius: 0;
 }
 
 /* The radio itself is invisible, so show its keyboard focus on the chip */
@@ -687,8 +734,8 @@ input:focus-visible + .chip {
   font-weight: 600;
   color: var(--ink);
   background: transparent;
-  border: 1px solid var(--control-line);
-  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--control-line);
+  border-radius: var(--radius-md);
   cursor: pointer;
   /* Phone feel: tap fires at once (no double-tap-zoom wait), and holding a button
      doesn't select its label */
@@ -705,10 +752,12 @@ input:focus-visible + .chip {
 }
 
 /* Gold: the one positive choice in a group ("Add new expenses" after picking a CSV) */
+/* Green felt with a cream stitch ("Add new entries" after picking a CSV) */
 .btn-gold {
   background: var(--green);
   border-color: var(--green);
   color: var(--cream);
+  box-shadow: inset 0 0 0 3px var(--green), inset 0 0 0 4.5px rgba(243, 233, 210, .6);
 }
 
 .btn-danger {
@@ -1211,14 +1260,41 @@ button.spin-row {
   border-bottom-color: var(--burgundy);
 }
 
-/* In the sheet, under the title: a bit taller, on the darker ground */
+/* In the sheet, under the title: two felt tabs in varsity lettering. The picked one is
+   burgundy (Expense) or green (Income) felt with a cream stitch. */
 .segmented-type {
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--space-2);
   margin-bottom: var(--space-3);
-  background: var(--paper);
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
 }
 
 .segmented-type label {
-  height: 40px;
+  height: 44px;
+  font-family: var(--font-varsity);
+  font-size: 14px;
+  font-weight: 400;
+  text-transform: uppercase; /* reads as lettering; screen readers still hear "Expense" */
+  color: var(--muted);
+  background: var(--tan-surface);
+  border-radius: var(--radius-md);
+}
+
+.segmented-type input:checked + label {
+  color: var(--cream);
+}
+
+#entry-expense:checked + label {
+  background: var(--burgundy);
+  box-shadow: inset 0 0 0 3px var(--burgundy), inset 0 0 0 4.5px rgba(243, 233, 210, .6), 0 6px 12px rgba(31, 59, 45, .2);
+}
+
+#entry-income:checked + label {
+  background: var(--green);
+  box-shadow: inset 0 0 0 3px var(--green), inset 0 0 0 4.5px rgba(243, 233, 210, .6), 0 6px 12px rgba(31, 59, 45, .2);
 }
 
 /* Actual balance: the field and its Update button side by side */
@@ -1234,7 +1310,7 @@ button.spin-row {
 }
 
 .balance-row .btn {
-  min-height: 50px; /* as tall as the field */
+  min-height: 48px; /* as tall as the field */
 }
 
 .balance-row .money-input.invalid input {
@@ -1257,8 +1333,9 @@ button.spin-row {
 .settings-label {
   display: block;
   margin-bottom: var(--space-2);
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
 }
 
 .settings-heading {
@@ -1296,8 +1373,12 @@ button.spin-row {
 }
 
 .money-input input {
+  min-height: 48px;
   padding-left: 32px; /* room for the ₱ */
   font-variant-numeric: tabular-nums;
+  background: var(--ticket);
+  border: 1.5px solid var(--control-line);
+  border-radius: var(--radius-md);
 }
 
 .money-input.invalid input {
@@ -1588,7 +1669,16 @@ button.motto {
   margin: 0 auto;
   background: var(--sheet);
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
-  box-shadow: 0 -1px 0 var(--line-strong);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, .25);
+}
+
+/* The Breton stripe along the top edge: navy and paper, following the rounded corners */
+.sheet-panel::before {
+  content: "";
+  flex-shrink: 0;
+  height: 14px;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: repeating-linear-gradient(180deg, var(--navy) 0 3px, var(--paper) 3px 7px);
 }
 
 /* A closed <dialog> must stay hidden (our display: flex above would show it) */
@@ -1610,7 +1700,7 @@ html:has(.recap[open]) {
 /* The top of the sheet (handle + title) is the drag handle: drag it down to close.
    touch-action: none = the browser leaves every finger movement here to app.js. */
 .sheet-top {
-  padding: 10px var(--space-5) 0;
+  padding: 12px var(--space-5) 0;
   touch-action: none;
   cursor: grab;
 }

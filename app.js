@@ -1357,6 +1357,7 @@ function buildCategoryChips(type) {
 function setSheetType(type, category) {
   sheetType = type;
   form.elements.type.value = type;
+  form.dataset.type = type; // the CSS colours the band, chips and amount by type
   buildCategoryChips(type);
   const pick = category ?? lastPicked[type];
   if (pick && categoriesFor(type).includes(pick)) form.elements.category.value = pick;
@@ -1372,7 +1373,7 @@ function updateSheetTexts() {
     submitBtn.textContent = 'Save changes';
   } else {
     sheetTitle.textContent = income ? 'New income' : 'New expense';
-    submitBtn.textContent = income ? 'Save income' : 'Save expense';
+    submitBtn.textContent = income ? 'Add income to the books' : 'Add to the books';
   }
   deleteBtn.textContent = income ? 'Delete income' : 'Delete expense';
   deleteQuestion.textContent = income ? 'Delete this income?' : 'Delete this expense?';

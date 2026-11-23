@@ -27,11 +27,11 @@
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Matt's Club">
-  <!-- "?v=16" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+  <!-- "?v=17" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
        style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
        AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
        instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
   <header class="app-header">
@@ -190,7 +190,9 @@
                type="text" + inputmode="decimal": the number keyboard with a dot, and no
                surprises from type="number" (scroll-wheel changes, "e" allowed). -->
           <div class="amount-field" id="amount-field">
-            <label for="amount">Amount</label>
+            <!-- A small cigar band on the amount ticket: burgundy for an expense, green for income -->
+            <div class="cigar-band amount-band" aria-hidden="true"><span>HOW MUCH</span></div>
+            <label for="amount" class="visually-hidden">Amount</label>
             <div class="amount-row">
               <!-- "₱" for an expense, "+₱" for income -->
               <span class="amount-currency" id="amount-prefix" aria-hidden="true">₱</span>
@@ -358,7 +360,8 @@
         <div class="sheet-scroll">
           <p id="opening-text" class="settings-note"></p>
           <div class="amount-field" id="opening-field">
-            <label for="opening-amount">Amount</label>
+            <div class="cigar-band amount-band band-green" aria-hidden="true"><span>YOU HAVE</span></div>
+            <label for="opening-amount" class="visually-hidden">Amount</label>
             <div class="amount-row">
               <span class="amount-currency" aria-hidden="true">₱</span>
               <input id="opening-amount" type="text" inputmode="decimal" autocomplete="off"
@@ -425,6 +428,6 @@
   </div>
 
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=16" defer></script>
+  <script src="app.js?v=17" defer></script>
 </body>
 </html>
