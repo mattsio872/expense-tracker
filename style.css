@@ -3,83 +3,84 @@
    "--name" is a CSS variable. We use it later with var(--name).
    Changing a color here changes it everywhere.
 
-   The look is "After Hours": a listening bar after closing. A dark room,
-   one glowing white lightbox (the monthly total), one gold accent.
-   The app is ALWAYS dark, so there is no light theme any more.
+   The look is "Matt's Club": a members' club with a varsity-jacket streak.
+   Cream paper, forest green, burgundy and a little gold; money set in a serif,
+   like a ledger. Light theme only.
    ========================================================= */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  /* Room */
-  --ground: #1b1411;          /* page background */
-  --surface: #241a16;         /* cards, sheets */
-  --surface-raised: #2f231e;  /* round icon buttons */
-  --line: #3a2c25;            /* card edges, rules (decorative) */
-  --line-soft: #2a201c;       /* row dividers */
-  --control-line: #7a6658;    /* chip + input borders, 3.1:1 on surface */
+  /* Paper and ink */
+  --paper: #f1ece1;          /* page background */
+  --ticket: #fbf6ea;         /* ticket / card surface */
+  --sheet: #f1ece1;          /* bottom sheets */
+  --tan-surface: #e4dccb;    /* close buttons, unselected tabs, bar tracks */
+  --line: #ddd5c4;           /* row dividers (decorative) */
+  --line-strong: #cfc6b4;    /* dashed tear line, handle (decorative) */
+  --control-line: #8a8170;   /* chip + input borders, 3.3:1 on paper */
+  --ink: #1b2233;            /* text, 13.5:1 on paper */
+  --muted: #5e6170;          /* secondary text, 5.2:1 on paper, 5.7:1 on ticket */
+  --scrim: rgba(27, 34, 51, 0.55); /* behind sheets */
 
-  /* Text */
-  --ink: #efe6d8;             /* 14.7:1 on ground */
-  --ink-muted: #bfb2a3;       /* 8.8:1 */
-  --ink-faint: #8c7f74;       /* motto + placeholders only, 4.7:1 */
+  /* Club colours */
+  --green: #1f3b2d;          /* primary: buttons, income amounts, budget fill. 10.4:1 on paper */
+  --green-hi: #2c5240;       /* patch highlight */
+  --burgundy: #6e1f2a;       /* expense tab/chips, pennant, cigar band, poker chip, active tab line */
+  --navy: #1c2a44;           /* Breton stripe */
+  --gold: #d9b35e;           /* stars, cigar band trim, income dot, record slice. Never text on paper */
+  --tan: #b8ad96;            /* "Rest" slice */
+  --cream: #f3e9d2;          /* text on green / burgundy / ink (10:1+) */
+  --danger: #9e2a2b;         /* delete text, errors, swipe-delete background (6.3:1 on paper) */
 
-  /* The lit sign */
-  --lightbox: #f6f1e7;
-  --lightbox-ink: #1b1411;
-  --lightbox-muted: #5b4a40;  /* 7.5:1 on lightbox */
-  --lightbox-track: #e3dacb;
+  /* Record */
+  --vinyl: #161616;
+  --groove: #1e1e1e;
 
-  /* Accent + wood */
-  --gold: #d9b35e;            /* the ONLY accent; dark text on it */
-  --cone-track: #2a1f1a;
-  --walnut-light: #7a5236;
-  --walnut: #5e3d27;
-  --walnut-ink: #f6e8d6;
-  --cone: #141110;
-  --cone-cap: #3a3330;
-  --signal: #ff6a4d;          /* Live dot only */
-  --live-ink: #ffe9c2;
-  --amber: #ff9a45;           /* the lit rings of the speaker cones (and the record's label) */
-  --amber-track: #3a2018;     /* the unlit part of a cone's ring */
-  --glow-cone: 0 0 8px rgba(255,130,50,.5);
-  --danger: #f2877d;          /* delete text, errors (8:1 on ground) */
+  /* Note */
+  --note: #fffdf6;
+  --tape: rgba(217, 179, 94, 0.55);
 
-  /* Category dots: names must match app.js ("--cat-" + the category, lowercase, spaces -> "-") */
-  --cat-food: #e0904a;
-  --cat-transport: #8fb3d9;
-  --cat-bills: #b79ae8;
-  --cat-shopping: #e98ba8;
-  --cat-health: #7fc8a0;
-  --cat-nights-out: #e8d27a;
-  --cat-school: #6fc6cf;
-  --cat-other: #a79c92;
+  /* Category dots (expense rows). Each 3:1+ on paper; dots also get a 1px outline */
+  --cat-food: #b85e14;
+  --cat-transport: #2f5e9e;
+  --cat-bills: #1f3b2d;
+  --cat-shopping: #6e1f2a;
+  --cat-health: #3f7d4e;
+  --cat-nights-out: #7a4fa0;
+  --cat-school: #9c7020;
+  --cat-other: #8a8170;
+
+  /* Record slices by rank (not by category) */
+  --rank-1: var(--green);
+  --rank-2: var(--burgundy);
+  --rank-3: var(--gold);
+  --rank-4: var(--tan);
 
   /* Type */
-  --font-sans: Outfit, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: Newsreader, Georgia, "Times New Roman", serif;
+  --font-sans: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-varsity: Graduate, "Arial Black", sans-serif;
   --font-hand: "Caveat Brush", cursive;
 
-  /* Space */
+  /* Space (unchanged) */
   --space-1: 4px;  --space-2: 8px;  --space-3: 12px;
   --space-4: 16px; --space-5: 20px; --space-6: 24px;
 
   /* Radius */
-  --radius-sm: 4px;
-  --radius-md: 14px;  /* inputs */
-  --radius-lg: 18px;  /* cards */
-  --radius-xl: 22px;  /* lightbox */
-  --radius-sheet: 28px; /* top corners of the add / edit sheet */
+  --radius-sm: 6px;     /* ticket, sheet chips are 8px */
+  --radius-md: 8px;     /* chips, felt tabs, inputs with a box */
+  --radius-sheet: 24px;
   --radius-pill: 999px;
 
-  /* Light */
-  --glow-lightbox: 0 0 0 1px #fff8ea, 0 0 46px rgba(255,236,200,.28), 0 18px 40px rgba(0,0,0,.45);
-  --glow-button: 0 0 30px rgba(255,236,200,.3);
-  --glow-field: 0 0 36px rgba(255,236,200,.22);
-  --walnut-edge: inset 0 1px 0 rgba(255,220,180,.18);
+  /* Shadows */
+  --shadow-ticket: 0 0 0 4px var(--ticket), 0 0 0 5px var(--green), 0 16px 26px rgba(31, 59, 45, 0.16);
+  --shadow-patch: 0 6px 12px rgba(31, 59, 45, 0.3);
+  --shadow-record: 0 10px 18px rgba(0, 0, 0, 0.28);
+  --shadow-button: 0 10px 20px rgba(31, 59, 45, 0.25);
+  --stitch: inset 0 0 0 4px var(--green), inset 0 0 0 5.5px rgba(243, 233, 210, 0.55);
 
-  /* Motion: a strong ease-out, so presses answer immediately */
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-
-  --tap: 44px;            /* minimum height for anything you tap (finger-sized) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* unchanged */
+  --tap: 44px;                                 /* unchanged */
 }
 
 /* =========================================================
@@ -99,7 +100,7 @@
 }
 
 html {
-  background: var(--ground);
+  background: var(--paper);
   /* No grey flash when you tap a button: each control has its own pressed look instead */
   -webkit-tap-highlight-color: transparent;
   /* Don't let the phone enlarge the text by itself when it's turned sideways */
@@ -110,7 +111,7 @@ html {
 body {
   margin: 0;
   min-height: 100dvh; /* dvh = the height you can actually see, with the browser bars showing */
-  background: var(--ground);
+  background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: 16px;   /* 16px+ stops iPhones from zooming in when you tap an input */
@@ -162,8 +163,11 @@ h2 {
   align-items: center;
   gap: var(--space-3);
   min-height: 44px;
-  font-size: 1.1875rem; /* 19px */
-  font-weight: 700;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
 }
 
 /* The monkey in a round frame with a thin gold ring.
@@ -173,8 +177,8 @@ h2 {
   height: 44px;
   flex-shrink: 0; /* never squash the icon if the title gets tight */
   border-radius: 50%;
-  background: #2b201b;
-  box-shadow: 0 0 0 1.5px #e0a458; /* warm: between the gold and the amber */
+  background: var(--green);
+  box-shadow: 0 0 0 2px var(--cream), 0 0 0 3.5px var(--burgundy);
   object-fit: cover;
 }
 
@@ -187,8 +191,8 @@ h2 {
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--ticket);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
 }
 
@@ -196,26 +200,24 @@ h2 {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--signal);
-  box-shadow: 0 0 8px var(--signal);
+  background: var(--burgundy);
 }
 
 .live-label {
   font-size: 0.8125rem; /* 13px */
   font-weight: 700;
   line-height: 18px;
-  color: var(--live-ink);
-  text-shadow: 0 0 8px rgba(255, 214, 150, .8);
+  color: var(--ink);
   white-space: nowrap;
 }
 
 .live-badge.is-past .live-dot {
-  background: var(--ink-faint);
+  background: var(--muted);
   box-shadow: none;
 }
 
 .live-badge.is-past .live-label {
-  color: var(--ink-muted);
+  color: var(--muted);
   text-shadow: none;
 }
 
@@ -234,7 +236,7 @@ h2 {
 
 /* The select is invisible, so show its keyboard focus ring on the badge instead */
 .live-badge:has(select:focus-visible) {
-  outline: 3px solid var(--gold);
+  outline: 3px solid var(--burgundy);
   outline-offset: 2px;
 }
 
@@ -254,10 +256,11 @@ h2 {
    5. Lightbox: this month's total, the one glowing thing
    ========================================================= */
 .lightbox {
-  background: var(--lightbox);
-  color: var(--lightbox-ink);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--glow-lightbox);
+  background: var(--ticket);
+  color: var(--ink);
+  border: 2px solid var(--green);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-ticket);
   padding: 22px 22px 20px;
   min-width: 0;
 }
@@ -269,7 +272,7 @@ h2 {
 .lightbox-label {
   font-size: 0.9375rem; /* 15px */
   font-weight: 600;
-  color: var(--lightbox-muted);
+  color: var(--muted);
 }
 
 .lightbox-total {
@@ -279,15 +282,17 @@ h2 {
 
 #total {
   display: block;
-  font-size: 64px;
-  line-height: 68px;
-  font-weight: 800;
-  letter-spacing: -2.2px;
+  font-family: var(--font-serif);
+  font-size: 62px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -2px;
+  padding: 4px 0; /* the serif's tall figures need a little room inside the measured box */
 }
 
-/* Smaller steps for a big balance (app.js picks one if 64px doesn't fit) */
-.lightbox-total.is-medium #total { font-size: 52px; line-height: 60px; letter-spacing: -1.8px; }
-.lightbox-total.is-small #total  { font-size: 40px; line-height: 48px; letter-spacing: -1.2px; }
+/* Smaller steps for a big balance (app.js picks one if 62px doesn't fit) */
+.lightbox-total.is-medium #total { font-size: 50px; letter-spacing: -1.6px; }
+.lightbox-total.is-small #total  { font-size: 40px; letter-spacing: -1.2px; }
 
 /* "Earned this month  +₱16,200 | Spent this month  −₱2,849", under a thin rule */
 .lightbox-month {
@@ -296,20 +301,21 @@ h2 {
   gap: var(--space-3);
   margin-top: var(--space-4);
   padding-top: 14px;
-  border-top: 1px solid var(--lightbox-track);
+  border-top: 1px solid var(--tan-surface);
 }
 
 .month-col-label {
   font-size: 0.8125rem; /* 13px */
   line-height: 18px;
-  color: var(--lightbox-muted);
+  color: var(--muted);
 }
 
 .month-col-value {
-  /* 18px, a little smaller on very narrow phones so a 7-digit amount still fits its column */
-  font-size: clamp(14px, 4.8vw, 18px);
-  line-height: 24px;
-  font-weight: 700;
+  /* 22px serif, a little smaller on very narrow phones so a 7-digit amount still fits its column */
+  font-family: var(--font-serif);
+  font-size: clamp(16px, 5.6vw, 22px);
+  line-height: 28px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -322,7 +328,7 @@ h2 {
 .budget-track {
   height: 4px;
   border-radius: var(--radius-pill);
-  background: var(--lightbox-track);
+  background: var(--tan-surface);
   overflow: hidden; /* rounds the fill's ends */
 }
 
@@ -330,7 +336,7 @@ h2 {
   height: 100%;
   width: 0;
   border-radius: var(--radius-pill);
-  background: var(--lightbox-ink);
+  background: var(--green);
 }
 
 .budget-row {
@@ -341,13 +347,13 @@ h2 {
   font-size: 0.875rem; /* 14px */
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--lightbox-muted);
+  color: var(--muted);
 }
 
 /* "₱7,151 left" / "₱420 over": the dark ink, never red (the lightbox stays calm) */
 .budget-left {
-  font-weight: 600;
-  color: var(--lightbox-ink);
+  font-weight: 700;
+  color: var(--ink);
 }
 
 /* =========================================================
@@ -375,7 +381,7 @@ h2 {
   margin-top: 4px;
   text-align: right;
   font-size: 0.8125rem;
-  color: var(--ink-muted);
+  color: var(--muted);
 }
 
 .hint.near-limit {
@@ -385,7 +391,7 @@ h2 {
 
 .optional {
   font-weight: 400;
-  color: var(--ink-muted);
+  color: var(--muted);
 }
 
 input,
@@ -396,23 +402,22 @@ select {
   font: inherit;
   font-size: 16px;             /* never smaller: iPhones zoom into inputs under 16px */
   color: var(--ink);
-  background: var(--ground);
+  background: var(--paper);
   border: 1px solid var(--control-line);
   border-radius: var(--radius-md);
 }
 
 input::placeholder {
-  color: var(--ink-faint);
+  color: var(--muted);
   opacity: 1; /* Firefox fades placeholders by default */
 }
 
 /* The amount: a lit panel, like the total on the home screen */
 .amount-field {
-  background: var(--lightbox);
-  color: var(--lightbox-ink);
-  border: 1px solid var(--lightbox);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--glow-field);
+  background: var(--ticket);
+  color: var(--ink);
+  border: 2px solid var(--green);
+  border-radius: var(--radius-sm);
   padding: 14px 18px 10px;
 }
 
@@ -420,7 +425,7 @@ input::placeholder {
   display: block;
   font-size: 0.9375rem;
   font-weight: 600;
-  color: var(--lightbox-muted);
+  color: var(--muted);
 }
 
 .amount-row {
@@ -431,10 +436,11 @@ input::placeholder {
 
 .amount-currency {
   white-space: nowrap; /* "+₱" stays together */
-  font-size: 40px;
-  font-weight: 800;
+  font-family: var(--font-serif);
+  font-size: 38px;
+  font-weight: 500;
   line-height: 64px;
-  color: var(--lightbox-muted);
+  color: var(--muted);
 }
 
 /* The big number. Plain on the panel: no box of its own */
@@ -442,12 +448,13 @@ input::placeholder {
   min-height: 0;
   height: 64px;
   padding: 0;
-  font-size: 56px;
-  font-weight: 800;
+  font-family: var(--font-serif);
+  font-size: 58px;
+  font-weight: 500;
   letter-spacing: -2px;
   line-height: 64px;
   font-variant-numeric: tabular-nums;
-  color: var(--lightbox-ink);
+  color: var(--ink);
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -461,19 +468,19 @@ input::placeholder {
 .amount-field.is-small .amount-currency { font-size: 32px; }
 
 .amount-field input::placeholder {
-  color: var(--lightbox-track);
+  color: var(--tan-surface);
 }
 
 /* Focus ring on the panel while you type the amount */
 .amount-field:focus-within {
-  outline: 3px solid var(--gold);
+  outline: 3px solid var(--burgundy);
   outline-offset: 2px;
 }
 
 /* Not a valid amount: red edge + the message under it */
 .amount-field.invalid {
   border-color: var(--danger);
-  box-shadow: 0 0 0 1px var(--danger), var(--glow-field);
+  box-shadow: 0 0 0 1px var(--danger);
 }
 
 .field-error {
@@ -526,14 +533,14 @@ input::placeholder {
 
 /* The picked chip: gold with dark text. ":checked + .chip" = the label right after a ticked radio */
 input:checked + .chip {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: var(--lightbox-ink);
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--cream);
 }
 
 /* The radio itself is invisible, so show its keyboard focus on the chip */
 input:focus-visible + .chip {
-  outline: 3px solid var(--gold);
+  outline: 3px solid var(--burgundy);
   outline-offset: 2px;
 }
 
@@ -576,9 +583,9 @@ input:focus-visible + .chip {
 
 /* Gold: the one positive choice in a group ("Add new expenses" after picking a CSV) */
 .btn-gold {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: var(--lightbox-ink);
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--cream);
 }
 
 .btn-danger {
@@ -589,7 +596,7 @@ input:focus-visible + .chip {
 .btn-danger-solid {
   background: var(--danger);
   border-color: var(--danger);
-  color: var(--lightbox-ink);
+  color: var(--cream);
 }
 
 .btn-small {
@@ -607,14 +614,14 @@ input:focus-visible + .chip {
 /* Hover only on devices with a real mouse. On phones a tap would leave the hover look "stuck". */
 @media (hover: hover) and (pointer: fine) {
   .btn:hover:not(:disabled) {
-    border-color: var(--ink-muted);
+    border-color: var(--muted);
   }
   .btn-gold:hover:not(:disabled),
   .btn-danger-solid:hover:not(:disabled) {
     filter: brightness(1.06);
   }
   .btn-gold:hover:not(:disabled) {
-    border-color: var(--gold);
+    border-color: var(--green);
   }
   .btn-danger-solid:hover:not(:disabled) {
     border-color: var(--danger);
@@ -623,7 +630,7 @@ input:focus-visible + .chip {
 
 /* Keyboard users see a clear gold ring on whatever is focused */
 :focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 3px solid var(--burgundy);
   outline-offset: 2px;
 }
 
@@ -637,9 +644,8 @@ select {
    ========================================================= */
 /* A walnut speaker cabinet: warm wood gradient with a light top edge */
 .speaker-panel {
-  background: linear-gradient(135deg, var(--walnut-light), var(--walnut) 55%, #6e4a31);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--walnut-edge);
+  background: linear-gradient(135deg, var(--green-hi), var(--green) 60%);
+  border-radius: var(--radius-md);
   padding: 16px 14px 14px;
 }
 
@@ -686,8 +692,8 @@ button.cone:active {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: conic-gradient(var(--amber) 0 var(--p, 0%), var(--amber-track) var(--p, 0%) 100%);
-  box-shadow: var(--glow-cone), inset 0 0 0 1px rgba(0, 0, 0, .45);
+  background: conic-gradient(var(--gold) 0 var(--p, 0%), rgba(243, 233, 210, .18) var(--p, 0%) 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35);
 }
 
 /* The speaker cone itself, with the percent printed on its dust cap */
@@ -697,8 +703,8 @@ button.cone:active {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 45%, #4a2a1e 0 16%, #1a0f0b 17% 58%, #2a1710 59% 63%, #140c09 64%);
-  color: var(--lightbox); /* the percent: plain, no glow */
+  background: radial-gradient(circle at 50% 45%, #2a3b31 0 16%, #14231b 17% 58%, #1d2f25 59% 63%, #10201a 64%);
+  color: var(--cream);
   font-size: 0.8125rem; /* 13px */
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -706,7 +712,7 @@ button.cone:active {
 
 /* The picked cone (the list shows only this category) gets a gold ring around it */
 .cone[aria-pressed="true"] .cone-ring {
-  outline: 2px solid var(--gold);
+  outline: 2px solid var(--cream);
   outline-offset: 3px;
 }
 
@@ -715,7 +721,7 @@ button.cone:active {
   font-size: 0.75rem; /* 12px */
   font-weight: 600;
   line-height: 16px;
-  color: var(--walnut-ink);
+  color: var(--cream);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -741,7 +747,7 @@ button.cone:active {
   gap: 4px;
   margin: 0;
   font-size: 0.9375rem;
-  color: var(--ink-muted);
+  color: var(--muted);
 }
 
 .filter-line:has(#filter-clear:not([hidden])) {
@@ -754,7 +760,7 @@ button.cone:active {
   padding: 0 4px;
   font: inherit;
   font-weight: 600;
-  color: var(--gold);
+  color: var(--burgundy);
   text-decoration: underline;
   text-underline-offset: 3px;
   background: none;
@@ -769,7 +775,7 @@ button.cone:active {
 .summary {
   margin: 0 0 var(--space-3);
   font-size: 0.875rem;
-  color: var(--ink-muted);
+  color: var(--muted);
 }
 
 /* "No expenses in November yet." */
@@ -777,7 +783,7 @@ button.cone:active {
   margin: 0;
   padding: var(--space-6) 0;
   text-align: center;
-  color: var(--ink-muted);
+  color: var(--muted);
 }
 
 .expense-list,
@@ -799,10 +805,17 @@ button.cone:active {
   justify-content: space-between;
   gap: var(--space-3);
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-strong);
   font-size: 1.125rem; /* 18px */
   line-height: 24px;
   font-weight: 700;
+}
+
+/* "Today", "Yesterday": the day's name in the serif */
+.day-label {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 500;
 }
 
 /* "+₱1,200 in   −₱230 out" on the right of a day header. With huge amounts on a narrow phone
@@ -820,17 +833,21 @@ button.cone:active {
 }
 
 .day-in {
-  color: var(--gold);
+  color: var(--green);
 }
 
 .day-out {
-  color: var(--ink-muted);
+  color: var(--muted);
 }
 
 /* One row, and the whole row is a button (tap to edit):
      • Jollibee lunch with classmates     ₱185.00
        Food
    A grid with 3 columns: the dot, the text (takes the rest), the amount. */
+.expense.swiping .swipe-delete {
+  visibility: visible;
+}
+
 /* Each row clips its button, so a row swiped to the left slides out of view */
 .expense {
   position: relative;
@@ -838,11 +855,14 @@ button.cone:active {
 }
 
 .expense + .expense {
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--line);
 }
 
-/* Behind the row: red with "Delete" on the right, uncovered as you swipe the row left */
+/* Behind the row: red with "Delete" on the right, uncovered as you swipe the row left.
+   Hidden until a swipe starts (app.js adds .swiping): otherwise a hairline of red can show
+   at the row's edges on the light paper. */
 .swipe-delete {
+  visibility: hidden;
   position: absolute;
   inset: 0;
   display: flex;
@@ -851,7 +871,7 @@ button.cone:active {
   padding-right: var(--space-5);
   font-size: 0.9375rem;
   font-weight: 700;
-  color: var(--lightbox-ink);
+  color: var(--cream);
   background: var(--danger);
 }
 
@@ -867,7 +887,7 @@ button.cone:active {
   color: inherit;
   text-align: left;
   position: relative; /* above the red "Delete" layer */
-  background: var(--ground); /* solid, so the red layer only shows when the row moves */
+  background: var(--paper); /* solid, so the red layer only shows when the row moves */
   border: 0;
   border-radius: 0;
   cursor: pointer;
@@ -879,7 +899,7 @@ button.cone:active {
 
 /* Pressed: the row lights up a touch the moment the finger lands */
 .expense-button:active {
-  background: var(--surface);
+  background: var(--ticket);
 }
 
 .expense-dot {
@@ -890,14 +910,14 @@ button.cone:active {
 
 /* Income: a hollow gold ring instead of a filled category dot */
 .expense-dot.is-income {
-  background: var(--ground);
+  background: var(--paper);
   border: 2px solid var(--gold);
 }
 
 /* A balance adjustment: a quiet hollow ring */
 .expense-dot.is-adjustment {
-  background: var(--ground);
-  border: 2px solid var(--ink-faint);
+  background: var(--paper);
+  border: 2px solid var(--muted);
 }
 
 .expense-info {
@@ -919,27 +939,28 @@ button.cone:active {
 .expense-meta {
   font-size: 0.8125rem; /* 13px */
   line-height: 18px;
-  color: var(--ink-muted);
+  color: var(--muted);
 }
 
 .expense-amount {
-  font-weight: 700;
-  font-size: 1.0625rem; /* 17px */
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 20px;
   line-height: 24px;
   white-space: nowrap; /* the amount never wraps; the title gives way instead */
 }
 
 .expense-amount.is-income {
-  color: var(--gold);
+  color: var(--green);
 }
 
 .expense-amount.is-adjustment {
-  color: var(--ink-muted);
+  color: var(--muted);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .expense-button:hover {
-    background: var(--surface);
+    background: var(--ticket);
   }
 }
 
@@ -962,8 +983,8 @@ button.cone:active {
   min-width: 0;
   margin: 0;
   padding: 4px;
-  background: #150f0d;
-  border: 1px solid var(--line);
+  background: var(--tan-surface);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-pill);
 }
 
@@ -974,7 +995,7 @@ button.cone:active {
   height: 36px;
   font-size: 0.875rem; /* 14px */
   font-weight: 700;
-  color: var(--ink-muted);
+  color: var(--muted);
   border-radius: var(--radius-pill);
   cursor: pointer;
   touch-action: manipulation;
@@ -984,12 +1005,12 @@ button.cone:active {
 
 /* The picked segment lights up like the lightbox */
 .segmented input:checked + label {
-  background: var(--lightbox);
-  color: var(--lightbox-ink);
+  background: var(--green);
+  color: var(--cream);
 }
 
 .segmented input:focus-visible + label {
-  outline: 3px solid var(--gold);
+  outline: 3px solid var(--burgundy);
   outline-offset: 2px;
 }
 
@@ -1001,7 +1022,7 @@ button.cone:active {
 /* In the sheet, under the title: a bit taller, on the darker ground */
 .segmented-type {
   margin-bottom: var(--space-3);
-  background: var(--ground);
+  background: var(--paper);
 }
 
 .segmented-type label {
@@ -1038,7 +1059,7 @@ button.cone:active {
 .settings-section + .settings-section {
   margin-top: var(--space-6);
   padding-top: var(--space-5);
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--line);
 }
 
 .settings-label {
@@ -1050,15 +1071,17 @@ button.cone:active {
 
 .settings-heading {
   margin: 0 0 4px;
-  font-size: 1.125rem; /* 18px */
-  font-weight: 700;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 20px;
+  font-weight: 600;
 }
 
 .settings-note,
 .settings-hint {
   margin: 0 0 var(--space-4);
   font-size: 0.875rem;
-  color: var(--ink-muted);
+  color: var(--muted);
 }
 
 .settings-hint {
@@ -1076,7 +1099,7 @@ button.cone:active {
   left: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--ink-muted);
+  color: var(--muted);
   pointer-events: none; /* taps go through to the input */
 }
 
@@ -1098,7 +1121,7 @@ button.cone:active {
 }
 
 .backup-last.overdue {
-  color: var(--gold);
+  color: var(--danger);
 }
 
 .export-month label {
@@ -1132,9 +1155,9 @@ button.cone:active {
 .import-preview {
   margin-top: var(--space-4);
   padding: var(--space-3);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
-  background: var(--ground);
+  background: var(--paper);
 }
 
 .import-summary {
@@ -1169,7 +1192,7 @@ button.cone:active {
   font-family: var(--font-hand);
   font-size: 22px;
   line-height: 28px;
-  color: var(--ink-faint);
+  color: var(--muted);
   transform: rotate(-2deg);
 }
 
@@ -1197,7 +1220,7 @@ button.motto {
   font-size: 0.875rem;
   font-weight: 600;
   text-align: center;
-  color: var(--gold);
+  color: var(--danger);
 }
 
 /* "Backup & settings": a quiet, underlined text button, still finger-sized */
@@ -1209,7 +1232,7 @@ button.motto {
   font: inherit;
   font-size: 0.9375rem;
   font-weight: 600;
-  color: var(--ink-muted);
+  color: var(--muted);
   text-decoration: underline;
   text-underline-offset: 3px;
   background: none;
@@ -1223,12 +1246,12 @@ button.motto {
 .offline-status {
   margin: 0;
   font-size: 0.8125rem;
-  color: var(--ink-muted);
+  color: var(--muted);
   text-align: center;
 }
 
 .offline-status.ready {
-  color: var(--gold);
+  color: var(--green);
   font-weight: 600;
 }
 
@@ -1246,11 +1269,11 @@ button.motto {
   font: inherit;
   font-size: 1.125rem; /* 18px */
   font-weight: 700;
-  color: var(--lightbox-ink);
-  background: var(--lightbox);
+  color: var(--cream);
+  background: var(--green);
   border: 0;
   border-radius: var(--radius-pill);
-  box-shadow: var(--glow-button);
+  box-shadow: var(--stitch), var(--shadow-button);
   cursor: pointer;
   touch-action: manipulation;
   user-select: none;
@@ -1280,7 +1303,7 @@ button.motto {
   right: 0;
   bottom: 0;
   height: calc(120px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(to bottom, transparent, var(--ground) 70%);
+  background: linear-gradient(to bottom, transparent, var(--paper) 70%);
   pointer-events: none; /* taps go through to whatever is under the fade */
   z-index: 9;
 }
@@ -1313,7 +1336,7 @@ button.motto {
   color: var(--ink);
   /* The dimmed page behind the sheet. It's on the dialog itself (not ::backdrop) so app.js
      can fade it together with the sheet while you drag it down. */
-  background: rgba(12, 9, 8, .7);
+  background: var(--scrim);
   border: 0;
   overflow: hidden;
 }
@@ -1334,9 +1357,9 @@ button.motto {
   max-width: 480px;
   max-height: calc(100% - 110px);
   margin: 0 auto;
-  background: var(--surface);
+  background: var(--sheet);
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
-  box-shadow: 0 -1px 0 var(--line);
+  box-shadow: 0 -1px 0 var(--line-strong);
 }
 
 /* A closed <dialog> must stay hidden (our display: flex above would show it) */
@@ -1375,7 +1398,7 @@ html:has(.recap[open]) {
   height: 5px;
   margin: 0 auto 10px;
   border-radius: var(--radius-pill);
-  background: #4a3a32;
+  background: var(--line-strong);
 }
 
 .sheet-head {
@@ -1388,9 +1411,12 @@ html:has(.recap[open]) {
 
 .sheet-head h2 {
   margin: 0;
-  font-size: 1.375rem; /* 22px */
-  line-height: 28px;
-  font-weight: 700;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 27px;
+  line-height: 32px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
 }
 
 /* The fields scroll on their own if the keyboard leaves too little room.
@@ -1410,7 +1436,7 @@ html:has(.recap[open]) {
 /* Save (and Delete) stay at the bottom of the sheet, above the home bar */
 .sheet-actions {
   padding: var(--space-3) var(--space-5) calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--line);
 }
 
 .sheet-actions .glow-button {
@@ -1446,7 +1472,7 @@ html:has(.recap[open]) {
   height: 44px;
   padding: 0;
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--tan-surface);
   border: 0;
   border-radius: 50%;
   cursor: pointer;
@@ -1499,10 +1525,11 @@ html:has(.recap[open]) {
   padding: 0 6px 0 16px;
   font-size: 0.875rem; /* 14px */
   font-weight: 600;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  color: var(--cream);
+  background: var(--ink);
+  border: 1px solid var(--ink);
   border-radius: var(--radius-pill);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, .25);
   white-space: nowrap;
   /* Hidden: a little lower and transparent. .show slides it up into place. */
   opacity: 0;
@@ -1537,11 +1564,10 @@ html:has(.recap[open]) {
   height: 30px;
   border-radius: 50%;
   background:
-    radial-gradient(circle, var(--ground) 0 1.5px, var(--amber) 1.5px 5.5px, transparent 5.5px),
+    radial-gradient(circle, var(--cream) 0 1.5px, var(--burgundy) 1.5px 4.5px, var(--gold) 4.5px 5.5px, transparent 5.5px),
     conic-gradient(transparent 0 30deg, rgba(255, 228, 196, .22) 50deg, transparent 70deg 210deg,
       rgba(255, 228, 196, .14) 230deg, transparent 250deg),
-    repeating-radial-gradient(circle, #0e0908 0 1.5px, #1e1512 1.5px 3px);
-  box-shadow: 0 0 10px rgba(255, 130, 50, .35);
+    repeating-radial-gradient(circle, #0e0e0e 0 1.5px, var(--groove) 1.5px 3px);
 }
 
 /* =========================================================
@@ -1564,7 +1590,7 @@ html:has(.recap[open]) {
   overflow-x: hidden;
   overflow-y: auto;
   color: var(--ink);
-  background: var(--ground);
+  background: var(--paper);
   border: 0;
 }
 
@@ -1579,7 +1605,7 @@ html:has(.recap[open]) {
 }
 
 .recap::backdrop {
-  background: var(--ground);
+  background: var(--paper);
 }
 
 /* With the ball hanging at the top, the content starts below it */
@@ -1597,15 +1623,17 @@ html:has(.recap[open]) {
 
 .recap-content h2 {
   margin: 0;
-  font-size: 1.75rem; /* 28px */
-  line-height: 34px;
-  font-weight: 700;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 30px;
+  line-height: 36px;
+  font-weight: 600;
 }
 
 .recap-subtitle {
   margin: 6px 0 var(--space-5);
   font-size: 1rem;
-  color: var(--ink-muted);
+  color: var(--muted);
 }
 
 .recap-lightbox {
@@ -1615,20 +1643,22 @@ html:has(.recap[open]) {
 /* "Kept": the same big number as the balance on the home screen */
 .recap-total strong {
   display: block;
-  font-size: 64px;
-  line-height: 68px;
-  font-weight: 800;
-  letter-spacing: -2.2px;
+  font-family: var(--font-serif);
+  font-size: 58px;
+  line-height: 1;
+  padding: 4px 0;
+  font-weight: 500;
+  letter-spacing: -2px;
   font-variant-numeric: tabular-nums;
 }
 
-.recap-total.is-medium strong { font-size: 52px; line-height: 60px; letter-spacing: -1.8px; }
-.recap-total.is-small strong  { font-size: 40px; line-height: 48px; letter-spacing: -1.2px; }
+.recap-total.is-medium strong { font-size: 50px; letter-spacing: -1.6px; }
+.recap-total.is-small strong  { font-size: 40px; letter-spacing: -1.2px; }
 
 .recap-sums {
   margin-top: var(--space-2) !important;
   font-size: 0.8125rem; /* 13px */
-  color: var(--lightbox-muted);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1659,7 +1689,7 @@ html:has(.recap[open]) {
 .disco-cord {
   width: 2px;
   height: 96px;
-  background: linear-gradient(var(--ground), #6b5a4e);
+  background: linear-gradient(var(--paper), #6b5a4e);
 }
 
 .disco-cap {
@@ -1700,7 +1730,7 @@ html:has(.recap[open]) {
 
 .glint-1 { top: 22px; left: 28px; background: #fff4de; }
 .glint-2 { top: 46px; left: 62px; background: #f2c46e; animation-delay: .45s; }
-.glint-3 { top: 66px; left: 36px; background: var(--amber); animation-delay: .9s; }
+.glint-3 { top: 66px; left: 36px; background: var(--gold); animation-delay: .9s; }
 
 @keyframes twinkle {
   0%, 100% { opacity: 0; transform: scale(.4); }

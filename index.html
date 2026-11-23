@@ -7,30 +7,31 @@
        viewport-fit=cover lets the dark background run under the notch and home bar;
        style.css then pads the content back out with env(safe-area-inset-*). -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <!-- The app is always dark ("After Hours"), so form controls and scrollbars are dark too -->
-  <meta name="color-scheme" content="dark">
-  <title>Matt's Expenses</title>
+  <!-- The app is always light ("Matt's Club"), so form controls and scrollbars are light too -->
+  <meta name="color-scheme" content="light">
+  <title>Matt's Club</title>
 
   <!-- PWA: the manifest tells phones this page can be installed as an app (name, icon, colors) -->
   <link rel="manifest" href="manifest.webmanifest">
-  <!-- Colors the phone's status bar / browser bar: the same as the page background -->
-  <meta name="theme-color" content="#1b1411">
+  <!-- Colors the phone's status bar / browser bar: the same as the page background (cream paper) -->
+  <meta name="theme-color" content="#f1ece1">
 
-  <!-- Fonts: Outfit (everything) and Caveat Brush (the motto only). Offline, the phone's own
-       font is used instead (see --font-sans in style.css), so the app still works. -->
+  <!-- Fonts: Newsreader (money and headings), Hanken Grotesk (everything else), Graduate (varsity
+       labels) and Caveat Brush (the motto). Offline, the fallbacks in style.css's font stacks are
+       used, so the app still works. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Caveat+Brush&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,600&family=Hanken+Grotesk:wght@500;600;700&family=Graduate&family=Caveat+Brush&display=swap" rel="stylesheet">
   <!-- Browser tab icon (also stops the "favicon.ico not found" error) -->
   <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
-  <meta name="apple-mobile-web-app-title" content="Expenses">
-  <!-- "?v=14" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+  <meta name="apple-mobile-web-app-title" content="Matt's Club">
+  <!-- "?v=15" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
        style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
        AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
        instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
   <header class="app-header">
@@ -410,6 +411,6 @@
   </div>
 
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=14" defer></script>
+  <script src="app.js?v=15" defer></script>
 </body>
 </html>

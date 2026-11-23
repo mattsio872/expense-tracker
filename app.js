@@ -1442,7 +1442,7 @@ function hideToast() {
 
 // The iOS sheet curve: very steep at the start, then a gentle settle
 const SHEET_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
-const SHEET_DIM = 0.7; // how dark the page behind gets (0 = not at all, 1 = black)
+const SHEET_DIM = 0.55; // how dark the page behind gets (0 = not at all, 1 = fully ink)
 
 function prefersReducedMotion() {
   return matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1454,7 +1454,7 @@ function sheetPanel(dialog) {
 
 // The darkness behind the sheet. amount: 1 = fully dimmed, 0 = not dimmed.
 function dimColor(amount) {
-  return `rgba(12, 9, 8, ${(SHEET_DIM * Math.min(Math.max(amount, 0), 1)).toFixed(3)})`;
+  return `rgba(27, 34, 51, ${(SHEET_DIM * Math.min(Math.max(amount, 0), 1)).toFixed(3)})`; // --scrim
 }
 
 // Where the panel is right now, in px below its resting place (works mid-animation too)
@@ -1707,6 +1707,7 @@ function setupSwipeToDelete() {
       }
       swipe.mode = 'dragging';
       swipe.startX = touch.clientX; // follow the finger from here, 1:1
+      swipe.button.parentElement.classList.add('swiping'); // shows the red "Delete" behind it
     }
 
     event.preventDefault(); // the page mustn't scroll while a row is being swiped
@@ -1742,7 +1743,8 @@ function setupSwipeToDelete() {
         showToast(`${typeName(lastDeleted)} deleted`, { undo: true });
       });
     } else {
-      slideRow(button, 0, 200); // not far enough: back into place
+      // not far enough: back into place, then hide the red layer again
+      slideRow(button, 0, 200, () => button.parentElement.classList.remove('swiping'));
     }
   }
 
