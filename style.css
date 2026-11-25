@@ -603,38 +603,26 @@ input::placeholder {
   opacity: 1; /* Firefox fades placeholders by default */
 }
 
-/* The amount: a lit panel, like the total on the home screen */
 /* The amount: a small ticket in a double navy frame, with a cigar band on top */
 .amount-field {
   background: var(--ticket);
   color: var(--ink);
   border: 2px solid var(--navy);
   border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-ticket);
+  box-shadow: 0 0 0 4px var(--ticket), 0 0 0 5px var(--navy), 0 12px 20px rgba(12, 31, 69, .14);
   padding: 0 18px 12px;
-  margin: 6px 5px 0; /* room for the outer frame */
+  margin: 16px 5px 0; /* 5px at the sides: room for the outer frame */
 }
 
-/* The band: 26px, navy with yellow trims (both types, and the opening sheet) */
+/* The band: 26px, navy with yellow trims, "★ HOW MUCH ★" (or "★ YOU HAVE ★") on a white pill */
 .amount-field .amount-band {
   height: 26px;
   margin: 0 -18px 6px;
   background: linear-gradient(var(--yellow) 0 2px, var(--navy) 2px 24px, var(--yellow) 24px);
 }
 
-#expense-form[data-type="income"] .amount-band,
-.amount-band.band-green {
-  background: linear-gradient(var(--yellow) 0 2px, var(--navy) 2px 24px, var(--yellow) 24px);
-}
-
-#expense-form[data-type="income"] .amount-band span,
-.amount-band.band-green span {
-  color: var(--navy);
-}
-
-/* Income amounts are navy ink, like every amount */
-#expense-form[data-type="income"] #amount {
-  color: var(--ink);
+.amount-field .amount-band span {
+  font-size: 10px;
 }
 
 .amount-field label {
@@ -693,8 +681,7 @@ input::placeholder {
   outline-offset: 8px; /* outside the double frame */
 }
 
-/* Not a valid amount: red edge + the message under it */
-/* Not a valid amount: the frame turns red */
+/* Not a valid amount: the frame turns red (the message shows under it) */
 .amount-field.invalid {
   border-color: var(--danger);
   box-shadow: 0 0 0 4px var(--ticket), 0 0 0 6px var(--danger);
@@ -757,11 +744,6 @@ input:checked + .chip {
   color: var(--cream);
 }
 
-#expense-form[data-type="expense"] #category-chips input:checked + .chip {
-  background: var(--navy);
-  box-shadow: 0 0 0 2px var(--navy);
-}
-
 /* The note: no box, just a line to write on */
 #note {
   min-height: var(--tap);
@@ -771,7 +753,7 @@ input:checked + .chip {
   font-size: 19px;
   background: transparent;
   border: 0;
-  border-bottom: 1.5px solid var(--ink);
+  border-bottom: 1.5px solid var(--navy);
   border-radius: 0;
 }
 
@@ -1354,16 +1336,14 @@ button.spin-row {
 
 .segmented-type input:checked + label {
   color: var(--cream);
-}
-
-#entry-expense:checked + label {
   background: var(--navy);
   box-shadow: inset 0 0 0 3px var(--navy), inset 0 0 0 4.5px rgba(243, 233, 210, .6), 0 6px 12px rgba(12, 31, 69, .2);
 }
 
-#entry-income:checked + label {
-  background: var(--navy);
-  box-shadow: inset 0 0 0 3px var(--navy), inset 0 0 0 4.5px rgba(243, 233, 210, .6), 0 6px 12px rgba(12, 31, 69, .2);
+/* Picked felt has a 2px navy edge: the focus ring sits a bit further out so it stays separate */
+.segmented-type input:checked:focus-visible + label,
+input:checked:focus-visible + .chip {
+  outline-offset: 4px;
 }
 
 /* Actual balance: the field and its Update button side by side */
@@ -1750,6 +1730,85 @@ button.motto {
   background: repeating-linear-gradient(180deg, var(--navy) 0 3px, var(--paper) 3px 7px);
 }
 
+/* The monkey peeking over the add / edit sheet's top edge, with a bubble to its left.
+   It rides along when the sheet slides or is dragged. Taps go through it. */
+#expense-sheet .sheet-panel {
+  position: relative;
+}
+
+.sheet-peek {
+  position: absolute;
+  top: -64px;
+  right: 72px;
+  pointer-events: none;
+}
+
+/* The patch: the home monkey's build, smaller (84px, thinner rings, one star) */
+.peek-patch {
+  position: relative;
+  display: block;
+  width: 84px;
+  height: 84px;
+}
+
+.peek-patch .patch-disc {
+  inset: 0;
+  box-shadow: 0 0 0 3px var(--cream), 0 0 0 5px var(--navy), var(--shadow-patch);
+}
+
+.peek-patch .patch-stitch {
+  inset: 5px;
+  border-width: 1.5px;
+}
+
+.peek-patch .patch-monkey {
+  left: 11px;
+  top: 9px;
+  width: 62px;
+  height: 62px;
+}
+
+.peek-patch .star {
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  transform: rotate(12deg);
+}
+
+/* "How much we talking?": a navy bubble on the patch's left, its tail pointing at the monkey */
+.peek-bubble {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--cream);
+  white-space: nowrap;
+  background: var(--navy);
+  border-radius: 14px 14px 4px 14px;
+}
+
+.peek-bubble::after {
+  content: "";
+  position: absolute;
+  right: -7px;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  background: var(--navy);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+
+/* Not enough room beside the monkey on the narrowest phones */
+@media (max-width: 339px) {
+  .peek-bubble {
+    display: none;
+  }
+}
+
 /* A closed <dialog> must stay hidden (our display: flex above would show it) */
 .sheet:not([open]) {
   display: none;
@@ -1914,10 +1973,10 @@ html:has(.recap[open]) {
   font-size: 0.875rem; /* 14px */
   font-weight: 600;
   color: var(--cream);
-  background: var(--ink);
+  background: var(--navy);
   border: 1px solid var(--ink);
   border-radius: var(--radius-pill);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, .25);
+  box-shadow: 0 10px 20px rgba(12, 31, 69, .25);
   white-space: nowrap;
   /* Hidden: a little lower and transparent. .show slides it up into place. */
   opacity: 0;

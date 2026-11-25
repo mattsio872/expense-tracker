@@ -27,11 +27,11 @@
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Matt's Club">
-  <!-- "?v=20" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+  <!-- "?v=21" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
        style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
        AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
        instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
   <header class="app-header">
@@ -172,6 +172,17 @@
     <!-- The visible sheet. The <dialog> around it fills the screen (see style.css).
          tabindex="-1" lets app.js put focus on the dialog itself when it opens. -->
     <div class="sheet-panel">
+      <!-- The monkey peeking over the sheet's top edge, with a line in a bubble (decoration:
+           the title already says what the sheet is). app.js sets the line. -->
+      <div class="sheet-peek" aria-hidden="true">
+        <span class="peek-bubble" id="peek-bubble">How much we talking?</span>
+        <span class="peek-patch">
+          <span class="patch-disc"></span>
+          <span class="patch-stitch"></span>
+          <img class="patch-monkey" src="images/monkey-icon.png" alt="" width="62" height="62">
+          <span class="star"></span>
+        </span>
+      </div>
       <div class="sheet-top">
         <div class="sheet-handle" aria-hidden="true"></div>
         <div class="sheet-head">
@@ -201,8 +212,8 @@
                type="text" + inputmode="decimal": the number keyboard with a dot, and no
                surprises from type="number" (scroll-wheel changes, "e" allowed). -->
           <div class="amount-field" id="amount-field">
-            <!-- A small cigar band on the amount ticket: burgundy for an expense, green for income -->
-            <div class="cigar-band amount-band" aria-hidden="true"><span>HOW MUCH</span></div>
+            <!-- A small navy cigar band on the amount ticket -->
+            <div class="cigar-band amount-band" aria-hidden="true"><span>★ HOW MUCH ★</span></div>
             <label for="amount" class="visually-hidden">Amount</label>
             <div class="amount-row">
               <!-- "₱" for an expense, "+₱" for income -->
@@ -371,7 +382,7 @@
         <div class="sheet-scroll">
           <p id="opening-text" class="settings-note"></p>
           <div class="amount-field" id="opening-field">
-            <div class="cigar-band amount-band band-green" aria-hidden="true"><span>YOU HAVE</span></div>
+            <div class="cigar-band amount-band" aria-hidden="true"><span>★ YOU HAVE ★</span></div>
             <label for="opening-amount" class="visually-hidden">Amount</label>
             <div class="amount-row">
               <span class="amount-currency" aria-hidden="true">₱</span>
@@ -445,6 +456,6 @@
   </div>
 
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=20" defer></script>
+  <script src="app.js?v=21" defer></script>
 </body>
 </html>

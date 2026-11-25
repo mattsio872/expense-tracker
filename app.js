@@ -83,6 +83,7 @@ const pokerChip = document.getElementById('poker-chip');
 const monkeyPatch = document.getElementById('monkey-patch');
 const monkeyTag = document.getElementById('monkey-tag');
 const monkeyLine = document.getElementById('monkey-line');
+const peekBubble = document.getElementById('peek-bubble');
 const addBtn = document.getElementById('add-btn');
 const exportMonth = document.getElementById('export-month');
 const exportBtn = document.getElementById('export-btn');
@@ -1478,9 +1479,11 @@ function updateSheetTexts() {
   if (editingId) {
     sheetTitle.textContent = income ? 'Edit income' : 'Edit expense';
     submitBtn.textContent = 'Save changes';
+    peekBubble.textContent = 'Fixing the books.';
   } else {
     sheetTitle.textContent = income ? 'New income' : 'New expense';
     submitBtn.textContent = income ? 'Add income to the books' : 'Add to the books';
+    peekBubble.textContent = income ? 'Money in? Love that.' : 'How much we talking?';
   }
   deleteBtn.textContent = income ? 'Delete income' : 'Delete expense';
   deleteQuestion.textContent = income ? 'Delete this income?' : 'Delete this expense?';
