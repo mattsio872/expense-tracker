@@ -291,12 +291,18 @@ h2 {
   border-radius: 50%;
 }
 
+/* The monkey sits inside the stitched circle, tee and all. Its picture ends flat at the
+   bottom (the yellow tee), so it sits low and is trimmed to a circle 2px inside the
+   stitching: the tee follows the round thread instead of ending in a straight line. The
+   stitching's inner edge is 49px from the button's centre (66px, 66px); the circle below is
+   47px, measured from the picture's corner. */
 .patch-monkey {
   position: absolute;
-  left: 20px;
-  top: 18px;
-  width: 92px;
-  height: 92px;
+  left: 24px;
+  top: 30px;
+  width: 84px;
+  height: 84px;
+  clip-path: circle(47px at 42px 36px);
 }
 
 /* A yellow star: a star-shaped mask filled with yellow. Used on the patch and in the bubble. */
@@ -1761,11 +1767,13 @@ button.motto {
   border-width: 1.5px;
 }
 
+/* Same as the home patch: the stitching's inner edge is 35.5px from the centre, so 34px */
 .peek-patch .patch-monkey {
-  left: 11px;
-  top: 9px;
-  width: 62px;
-  height: 62px;
+  left: 13px;
+  top: 20px;
+  width: 58px;
+  height: 58px;
+  clip-path: circle(34px at 29px 22px);
 }
 
 .peek-patch .star {

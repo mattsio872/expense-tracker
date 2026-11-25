@@ -27,11 +27,11 @@
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Matt's Club">
-  <!-- "?v=21" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+  <!-- "?v=22" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
        style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
        AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
        instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=21">
+  <link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
   <header class="app-header">
@@ -60,7 +60,7 @@
         <span class="patch-disc" aria-hidden="true"></span>
         <span class="patch-stitch" aria-hidden="true"></span>
         <!-- width/height reserve the space before the image loads, so the page doesn't jump -->
-        <img class="patch-monkey" src="images/monkey-icon.png" alt="" width="92" height="92">
+        <img class="patch-monkey" src="images/monkey-icon.png" alt="" width="84" height="84">
         <span class="star star-1" aria-hidden="true"></span>
         <span class="star star-2" aria-hidden="true"></span>
         <span class="star star-3" aria-hidden="true"></span>
@@ -179,7 +179,7 @@
         <span class="peek-patch">
           <span class="patch-disc"></span>
           <span class="patch-stitch"></span>
-          <img class="patch-monkey" src="images/monkey-icon.png" alt="" width="62" height="62">
+          <img class="patch-monkey" src="images/monkey-icon.png" alt="" width="58" height="58">
           <span class="star"></span>
         </span>
       </div>
@@ -456,6 +456,6 @@
   </div>
 
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=21" defer></script>
+  <script src="app.js?v=22" defer></script>
 </body>
 </html>
