@@ -974,14 +974,15 @@ button.spin-row {
   box-shadow: inset 0 0 0 1px rgba(12, 31, 69, .4);
 }
 
+/* On the narrowest phones a name like "Nights out" wraps onto a second line instead of
+   being cut off (the row is 44px tall, so two short lines fit) */
 .spin-name {
   flex: 1;
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .spin-pct {
@@ -2068,7 +2069,7 @@ html:has(.recap[open]) {
 /* With the ball hanging at the top, the content starts below it */
 .recap.has-ball {
   justify-content: flex-start;
-  padding-top: calc(222px + env(safe-area-inset-top, 0px));
+  padding-top: calc(206px + env(safe-area-inset-top, 0px));
 }
 
 .recap-content {
@@ -2076,6 +2077,26 @@ html:has(.recap[open]) {
   max-width: 390px;
   margin: 0 auto;
   text-align: center;
+}
+
+/* The monkey patch above the title: the home patch's build at 96px (zoom shrinks the whole
+   132px build, rings, stitch and stars together, and its space in the layout too) */
+.recap-patch {
+  position: relative;
+  display: block;
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 6px;
+  zoom: 0.8276; /* 116px disc -> 96px */
+}
+
+/* No stars unless the month went well */
+.recap-patch .star {
+  display: none;
+}
+
+.recap.has-ball .recap-patch .star {
+  display: block;
 }
 
 .recap-content h2 {
@@ -2089,7 +2110,7 @@ html:has(.recap[open]) {
 }
 
 .recap-subtitle {
-  margin: 6px 0 var(--space-6);
+  margin: 6px 0 var(--space-5);
   font-size: 1rem;
   color: rgba(243, 233, 210, .8); /* 7:1+ on the navy */
 }
@@ -2125,7 +2146,7 @@ html:has(.recap[open]) {
 
 /* The taped note, under the ticket (not a button here) */
 .recap-motto {
-  margin-top: 30px;
+  margin-top: 22px;
   min-height: 0;
 }
 
