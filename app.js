@@ -80,6 +80,9 @@ const speakerPanel = document.getElementById('speaker-panel');
 const cones = document.getElementById('cones');
 const recordLabel = document.getElementById('record-label');
 const pokerChip = document.getElementById('poker-chip');
+const monkeyPatch = document.getElementById('monkey-patch');
+const monkeyTag = document.getElementById('monkey-tag');
+const monkeyLine = document.getElementById('monkey-line');
 const addBtn = document.getElementById('add-btn');
 const exportMonth = document.getElementById('export-month');
 const exportBtn = document.getElementById('export-btn');
@@ -698,7 +701,106 @@ function renderLightbox() {
     const left = Math.round(budget) - Math.round(spent);
     budgetLeft.textContent = left >= 0 ? `${formatWholePeso(left)} left` : `${formatWholePeso(-left)} over`;
   }
+
+  renderMonkey({ month, isCurrent, name, monthEntries, earned, spent });
 }
+
+// ===== 5a. The monkey: a line about the month in its speech bubble =====
+// moods = every line that fits right now, most important first. The bubble shows the first;
+// tapping the monkey steps to the next one (and wraps). Redrawn after every save, delete,
+// undo and month change, so it always starts again from the most important line.
+let moods = [];
+let moodIndex = 0;
+
+function monkeyMoods({ month, isCurrent, name, monthEntries, earned, spent }) {
+  const kept = Math.round(earned) - Math.round(spent);
+  const over = budget !== null ? Math.round(spent) - Math.round(budget) : null;
+
+  // An earlier month: only how it went
+  if (!isCurrent) {
+    let line;
+    if (monthEntries.length === 0) line = `Back in ${name}. Nothing on the books.`;
+    else if (over !== null && over > 0) line = `Back in ${name}. You went ${formatWholePeso(over)} over.`;
+    else if (kept >= 0) line = `Back in ${name}. You kept ${formatWholePeso(kept)}.`;
+    else line = `Back in ${name}. ${formatWholePeso(-kept)} more out than in.`;
+    return [{ tag: 'LOOKING BACK', line }];
+  }
+
+  const list = [];
+  const today = todayString();
+  const todays = monthEntries.filter((e) => e.date === today);
+
+  const paidToday = todays.filter((e) => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
+  if (paidToday > 0) {
+    list.push({ tag: 'PAYDAY', line: `+${formatWholePeso(paidToday)} just landed. Let’s gooo.` });
+  }
+
+  const bigOne = todays
+    .filter((e) => e.type === 'expense' && e.amount >= 500)
+    .sort((a, b) => b.amount - a.amount)[0];
+  if (bigOne) {
+    list.push({
+      tag: 'BIG ONE',
+      line: `${formatWholePeso(bigOne.amount)} on ${bigOne.category.toLowerCase()}?! Okay… respect.`,
+    });
+  }
+
+  if (over !== null && over > 0) {
+    list.push({ tag: 'OVER BUDGET', line: `Whoa. ${formatWholePeso(over)} over. Easy now, boss.` });
+  } else if (over !== null) {
+    list.push({ tag: 'UNDER BUDGET', line: `${formatWholePeso(-over)} left this month. We chillin’.` });
+  } else if (monthEntries.length > 0) {
+    list.push({
+      tag: 'THE BOOKS',
+      line: kept >= 0
+        ? `${formatWholePeso(kept)} kept this month. Smooth.`
+        : `${formatWholePeso(-kept)} more out than in. Easy now.`,
+    });
+  }
+
+  if (monthEntries.length === 0) {
+    list.push({ tag: 'FRESH MONTH', line: 'Nothing on the books yet. Log something.' });
+  }
+  return list;
+}
+
+function renderMonkey(state) {
+  moods = monkeyMoods(state);
+  moodIndex = 0;
+  showMood();
+}
+
+function showMood() {
+  const mood = moods[moodIndex];
+  if (monkeyTag.textContent === mood.tag && monkeyLine.textContent === mood.line) return;
+  const firstTime = monkeyLine.textContent === '';
+  monkeyTag.textContent = mood.tag;
+  monkeyLine.textContent = mood.line;
+  // A quick cross-fade when the line changes (not on the very first line, not with Reduce Motion)
+  if (!firstTime && !prefersReducedMotion()) {
+    for (const part of [monkeyTag, monkeyLine]) {
+      part.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' });
+    }
+  }
+}
+
+monkeyPatch.addEventListener('click', function () {
+  if (moods.length > 1) {
+    moodIndex = (moodIndex + 1) % moods.length;
+    showMood();
+  } else if (!prefersReducedMotion()) {
+    // Only one thing to say: a little wiggle instead
+    monkeyPatch.animate(
+      [
+        { transform: 'rotate(0deg)' },
+        { transform: 'rotate(-6deg)' },
+        { transform: 'rotate(6deg)' },
+        { transform: 'rotate(0deg)' },
+      ],
+      { duration: 400, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }
+    );
+  }
+});
 
 // The poker chip ("UNDER BUDGET") shows when the month is under budget, but never over the
 // balance: if the balance had to shrink, or is too wide to leave room beside it, the chip
@@ -809,7 +911,7 @@ function recordGradient(slots, percents) {
     const faded = filters.category !== 'all' && slot.category !== filters.category;
     const colour = faded ? `color-mix(in srgb, ${RANK_COLOURS[i]} 35%, var(--paper))` : RANK_COLOURS[i];
     // (one category = one whole slice: no gap, or it would look like a clock hand)
-    const sliceEnd = slots.length === 1 ? end : Math.max(start, end - 0.6);
+    const sliceEnd = slots.length === 1 ? end : Math.max(start, end - 0.8);
     stops.push(`${colour} ${start}% ${sliceEnd}%`, `var(--paper) ${sliceEnd}% ${end}%`);
     start = end;
   });

@@ -27,25 +27,17 @@
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Matt's Club">
-  <!-- "?v=19" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+  <!-- "?v=20" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
        style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
        AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
        instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=19">
+  <link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
   <header class="app-header">
     <div class="brand">
-      <!-- The monkey as a chenille patch: a green disc with cream and burgundy rings and a
-           stitched edge (all CSS). alt="" marks it as decoration; the title says the name.
-           width/height reserve the space before the image loads, so the page doesn't jump. -->
-      <span class="patch" aria-hidden="true">
-        <img class="app-icon" src="images/monkey-icon.png" alt="" width="38" height="38">
-      </span>
-      <div class="brand-text">
-        <h1 class="app-title">Matt's Club</h1>
-        <span class="tagline" aria-hidden="true">Members only, est. 2026</span>
-      </div>
+      <h1 class="app-title">Matt's Club</h1>
+      <p class="tagline">Members only, est. 2026</p>
     </div>
 
     <!-- The pennant: which month the whole screen shows ("NOV ’26"). The real control is the
@@ -60,6 +52,25 @@
 
   <!-- One column, centred, on every screen size -->
   <main class="layout">
+    <!-- The monkey hero: the monkey as a chenille patch (a navy disc, cream and navy rings, a
+         stitched edge, three yellow stars), and a speech bubble with a line about the month.
+         app.js picks the line (renderMonkey). Tapping the monkey gives another line. -->
+    <section class="monkey-hero" aria-label="The monkey">
+      <button type="button" class="monkey-patch" id="monkey-patch" aria-label="Monkey. Tap for another line">
+        <span class="patch-disc" aria-hidden="true"></span>
+        <span class="patch-stitch" aria-hidden="true"></span>
+        <!-- width/height reserve the space before the image loads, so the page doesn't jump -->
+        <img class="patch-monkey" src="images/monkey-icon.png" alt="" width="92" height="92">
+        <span class="star star-1" aria-hidden="true"></span>
+        <span class="star star-2" aria-hidden="true"></span>
+        <span class="star star-3" aria-hidden="true"></span>
+      </button>
+      <div class="monkey-bubble" id="monkey-bubble" aria-live="polite">
+        <span class="monkey-tag" id="monkey-tag"></span>
+        <span class="monkey-line" id="monkey-line"></span>
+      </div>
+    </section>
+
     <!-- The ticket: your balance, then the chosen month's money in and out. app.js fills it in.
          (Its class is still "lightbox" from the earlier design, so app.js keeps finding it.) -->
     <section class="lightbox" aria-labelledby="total-label">
@@ -434,6 +445,6 @@
   </div>
 
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=19" defer></script>
+  <script src="app.js?v=20" defer></script>
 </body>
 </html>

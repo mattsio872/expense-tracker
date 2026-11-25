@@ -145,46 +145,6 @@ h2 {
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-
-/* The monkey as a chenille patch: a navy disc, a cream then a navy ring, a stitched edge,
-   sewn on slightly crooked */
-.patch {
-  position: relative;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--navy-hi), var(--navy) 70%);
-  box-shadow: 0 0 0 3px var(--cream), 0 0 0 5px var(--navy), var(--shadow-patch);
-  transform: rotate(-6deg);
-}
-
-/* The stitching just inside the edge */
-.patch::before {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  border: 1.5px dashed rgba(243, 233, 210, .7);
-  border-radius: 50%;
-}
-
-/* The image file is 160×160, shown at 38×38, so it stays sharp on high-resolution screens */
-.app-icon {
-  position: relative;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.brand-text {
   min-width: 0;
 }
 
@@ -192,7 +152,7 @@ h2 {
   margin: 0;
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 25px;
+  font-size: 24px;
   line-height: 1.1;
   font-weight: 600;
   letter-spacing: -0.4px;
@@ -201,8 +161,7 @@ h2 {
 
 /* On the narrowest phones it wraps onto a second line instead of running under the pennant */
 .tagline {
-  display: block;
-  margin-top: 2px;
+  margin: 4px 0 0;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.3;
@@ -210,7 +169,7 @@ h2 {
 }
 
 /* The pennant, top right: which month the screen shows ("NOV ’26"). A felt triangle with a
-   cream sleeve on its left edge. An earlier month turns grey. 86×44 = the tap area. */
+   white sleeve on its left edge. An earlier month turns grey. 86×44 = the tap area. */
 .pennant {
   position: relative;
   flex-shrink: 0;
@@ -236,19 +195,20 @@ h2 {
   top: 0;
   bottom: 0;
   width: 6px;
-  background: var(--cream);
+  background: var(--ticket);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .live-label {
   position: absolute;
   left: 11px;
-  top: 50%;
+  top: 14px;
   font-family: var(--font-varsity);
   font-size: 13px;
   line-height: 1;
   color: var(--cream);
   white-space: nowrap;
-  transform: translateY(-50%) rotate(-2deg);
+  transform: rotate(-2deg);
   pointer-events: none;
 }
 
@@ -282,9 +242,130 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr); /* the column never grows past the screen */
   gap: var(--space-5);
-  padding: var(--space-6) var(--space-5) var(--space-5);
+  padding: var(--space-4) var(--space-5) var(--space-5); /* 16px down to the monkey */
   max-width: 480px;
   margin: 0 auto;
+}
+
+/* =========================================================
+   4b. The monkey hero: the patch and its speech bubble
+   ========================================================= */
+.monkey-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* The whole patch is the button (132×132, well over the 44px tap size) */
+.monkey-patch {
+  position: relative;
+  flex-shrink: 0;
+  width: 132px;
+  height: 132px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* A navy felt disc with a cream then a navy ring, sewn on slightly crooked */
+.patch-disc {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--navy-hi), var(--navy) 70%);
+  box-shadow: 0 0 0 4px var(--cream), 0 0 0 7px var(--navy), var(--shadow-patch);
+  transform: rotate(-6deg);
+}
+
+/* The stitching just inside the edge */
+.patch-stitch {
+  position: absolute;
+  inset: 15px;
+  border: 2px dashed rgba(243, 233, 210, .7);
+  border-radius: 50%;
+}
+
+.patch-monkey {
+  position: absolute;
+  left: 20px;
+  top: 18px;
+  width: 92px;
+  height: 92px;
+}
+
+/* A yellow star: a star-shaped mask filled with yellow. Used on the patch and in the bubble. */
+.star {
+  position: absolute;
+  background: var(--yellow);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m12 2 2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m12 2 2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.star-1 { width: 22px; height: 22px; left: -2px; top: 4px; transform: rotate(-14deg); }
+.star-2 { width: 16px; height: 16px; right: -4px; top: 18px; transform: rotate(12deg); }
+.star-3 { width: 20px; height: 20px; right: 6px; bottom: 0; transform: rotate(-8deg); }
+
+/* The keyboard focus ring hugs the round patch */
+.monkey-patch:focus-visible {
+  outline-offset: -2px;
+}
+
+/* The speech bubble: navy, cream text, a tail at the bottom left pointing at the monkey */
+.monkey-bubble {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--cream);
+  background: var(--navy);
+  border-radius: 18px 18px 18px 4px;
+}
+
+.monkey-bubble::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  background: var(--navy);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+/* "★ UNDER BUDGET" above the line, in varsity lettering */
+.monkey-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+  font-family: var(--font-varsity);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--yellow);
+}
+
+.monkey-tag::before {
+  content: "";
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  background: var(--yellow);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m12 2 2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m12 2 2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.monkey-line {
+  display: block;
 }
 
 /* =========================================================
@@ -831,14 +912,15 @@ select {
   pointer-events: none;
 }
 
-/* The label: a pie of the categories (app.js sets the conic-gradient), with a cream edge */
+/* The label: a pie of the categories (app.js sets the conic-gradient), with a paper then a
+   thin yellow ring */
 .record-label {
   position: relative;
-  width: 62px;
-  height: 62px;
+  width: 74px;
+  height: 74px;
   border-radius: 50%;
   background: var(--paper);
-  box-shadow: 0 0 0 2px var(--cream);
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--yellow);
 }
 
 /* The spindle hole */
@@ -870,6 +952,7 @@ select {
 .spin-list {
   display: flex;
   flex-direction: column;
+  gap: 6px;
 }
 
 /* One legend row: dot, name, percent. Category rows are buttons (tap to filter the list) */
@@ -1447,7 +1530,7 @@ button.spin-row {
   width: 210px;
   max-width: calc(100% - 40px);
   min-height: var(--tap);
-  margin: 28px auto 0;
+  margin: 14px auto 0;
   padding: 14px 14px 10px;
   text-align: center;
   font-family: var(--font-hand);
@@ -1575,9 +1658,9 @@ button.motto {
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m12 2 2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
-/* Green buttons show their keyboard focus in cream */
+/* Navy buttons show their keyboard focus in yellow */
 .glow-button:focus-visible {
-  outline-color: var(--cream);
+  outline-color: var(--yellow);
   outline-offset: -8px;
 }
 
@@ -1592,14 +1675,14 @@ button.motto {
   z-index: 10;
 }
 
-/* The list fades into the dark behind the button instead of being cut off by it */
+/* The list fades into the paper behind the button instead of being cut off by it */
 .add-fade {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  height: calc(120px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(to bottom, transparent, var(--paper) 70%);
+  height: calc(130px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(rgba(248, 246, 241, 0), var(--paper) 50%);
   pointer-events: none; /* taps go through to whatever is under the fade */
   z-index: 9;
 }

@@ -10,7 +10,7 @@
 // Must match the ?v= number on the style.css and app.js links in index.html.
 // Raise it whenever any app file changes: the browser sees sw.js changed, installs this new
 // version, and the old cache is deleted.
-const VERSION = 19;
+const VERSION = 20;
 const CACHE = `expense-tracker-v${VERSION}`;
 
 // Everything the app needs to open offline
