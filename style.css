@@ -3,58 +3,45 @@
    "--name" is a CSS variable. We use it later with var(--name).
    Changing a color here changes it everywhere.
 
-   The look is "Matt's Club": a members' club with a varsity-jacket streak.
-   Cream paper, forest green, burgundy and a little gold; money set in a serif,
-   like a ledger. Light theme only.
+   The look is "Matt's Club": a members' club with a varsity streak, hosted by
+   Matt's monkey. Pale paper, deep navy and one bright yellow; money set in a
+   serif, like a ledger. Light theme only.
    ========================================================= */
 :root {
   color-scheme: light;
 
   /* Paper and ink */
-  --paper: #f1ece1;          /* page background */
-  --ticket: #fbf6ea;         /* ticket / card surface */
-  --sheet: #f1ece1;          /* bottom sheets */
-  --tan-surface: #e4dccb;    /* close buttons, unselected tabs, bar tracks */
-  --line: #ddd5c4;           /* row dividers (decorative) */
-  --line-strong: #cfc6b4;    /* dashed tear line, handle (decorative) */
-  --control-line: #8a8170;   /* chip + input borders, 3.3:1 on paper */
-  --ink: #1b2233;            /* text, 13.5:1 on paper */
-  --muted: #5e6170;          /* secondary text, 5.2:1 on paper, 5.7:1 on ticket */
-  --scrim: rgba(27, 34, 51, 0.55); /* behind sheets */
+  --paper: #f8f6f1;          /* page background, sheets */
+  --ticket: #ffffff;         /* ticket, amount ticket, note, money inputs */
+  --tan-surface: #ece8e0;    /* close buttons, unselected felt tabs, bar track */
+  --line: #e7e3db;           /* row dividers (decorative) */
+  --line-strong: #cfc6b4;    /* dashed tear line, sheet handle (decorative) */
+  --control-line: #8a8170;   /* chip + input borders, 3.6:1 on paper */
+  --ink: #0c1f45;            /* = navy. All text, 15:1 on paper, 16.2:1 on white */
+  --muted: #5e6170;          /* secondary text, 5.7:1 on paper, 6.1:1 on white */
+  --scrim: rgba(12, 31, 69, 0.55);
 
   /* Club colours */
-  --green: #1f3b2d;          /* primary: buttons, income amounts, budget fill. 10.4:1 on paper */
-  --green-hi: #2c5240;       /* patch highlight */
-  --burgundy: #6e1f2a;       /* expense tab/chips, pennant, cigar band, poker chip, active tab line */
-  --navy: #1c2a44;           /* Breton stripe */
-  --gold: #d9b35e;           /* stars, cigar band trim, income dot, record slice. Never text on paper */
-  --tan: #b8ad96;            /* "Rest" slice */
-  --cream: #f3e9d2;          /* text on green / burgundy / ink (10:1+) */
-  --danger: #9e2a2b;         /* delete text, errors, swipe-delete background (6.3:1 on paper) */
+  --navy: #0c1f45;           /* buttons, felt, bubble, pennant, cigar band, record, rules */
+  --navy-hi: #1a3566;        /* patch highlight */
+  --navy-deep: #050e22;      /* shadows on navy pieces */
+  --yellow: #fac92f;         /* stars, band trim, income dot, tape. Text only on navy (10.4:1) */
+  --cream: #f3e9d2;          /* text and stitching on navy (13.4:1) */
+  --danger: #9e2a2b;         /* delete text, errors, swipe-delete background (6.9:1 on paper) */
 
   /* Record */
-  --vinyl: #161616;
-  --groove: #1e1e1e;
+  --groove-a: #08152f;
+  --groove-b: #11264f;
+
+  /* Record slices by rank (not by category). Palette "Brass & wine".
+     Rows use the same colours, so a row's dot matches its slice. */
+  --rank-1: #b8861b;         /* brass */
+  --rank-2: #7a2233;         /* burgundy */
+  --rank-3: #1f5e63;         /* deep teal */
+  --rank-4: #3f5e99;         /* slate navy ("Rest" when there is one) */
 
   /* Note */
-  --note: #fffdf6;
-  --tape: rgba(217, 179, 94, 0.55);
-
-  /* Category dots (expense rows). Each 3:1+ on paper; dots also get a 1px outline */
-  --cat-food: #b85e14;
-  --cat-transport: #2f5e9e;
-  --cat-bills: #1f3b2d;
-  --cat-shopping: #6e1f2a;
-  --cat-health: #3f7d4e;
-  --cat-nights-out: #7a4fa0;
-  --cat-school: #9c7020;
-  --cat-other: #8a8170;
-
-  /* Record slices by rank (not by category) */
-  --rank-1: var(--green);
-  --rank-2: var(--burgundy);
-  --rank-3: var(--gold);
-  --rank-4: var(--tan);
+  --tape: rgba(250, 201, 47, 0.55);
 
   /* Type */
   --font-serif: Newsreader, Georgia, "Times New Roman", serif;
@@ -67,17 +54,17 @@
   --space-4: 16px; --space-5: 20px; --space-6: 24px;
 
   /* Radius */
-  --radius-sm: 6px;     /* ticket, sheet chips are 8px */
+  --radius-sm: 6px;     /* tickets */
   --radius-md: 8px;     /* chips, felt tabs, inputs with a box */
   --radius-sheet: 24px;
   --radius-pill: 999px;
 
   /* Shadows */
-  --shadow-ticket: 0 0 0 4px var(--ticket), 0 0 0 5px var(--green), 0 16px 26px rgba(31, 59, 45, 0.16);
-  --shadow-patch: 0 6px 12px rgba(31, 59, 45, 0.3);
-  --shadow-record: 0 10px 18px rgba(0, 0, 0, 0.28);
-  --shadow-button: 0 10px 20px rgba(31, 59, 45, 0.25);
-  --stitch: inset 0 0 0 4px var(--green), inset 0 0 0 5.5px rgba(243, 233, 210, 0.55);
+  --shadow-ticket: 0 0 0 4px var(--ticket), 0 0 0 5px var(--navy), 0 16px 26px rgba(12, 31, 69, 0.16);
+  --shadow-patch: 0 10px 18px rgba(12, 31, 69, 0.3);
+  --shadow-record: 0 10px 18px rgba(12, 31, 69, 0.3);
+  --shadow-button: 0 10px 20px rgba(12, 31, 69, 0.25);
+  --stitch: inset 0 0 0 4px var(--navy), inset 0 0 0 5.5px rgba(243, 233, 210, 0.55);
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* unchanged */
   --tap: 44px;                                 /* unchanged */
@@ -164,7 +151,7 @@ h2 {
   min-width: 0;
 }
 
-/* The monkey as a chenille patch: a green disc, a cream then a burgundy ring, a stitched edge,
+/* The monkey as a chenille patch: a navy disc, a cream then a navy ring, a stitched edge,
    sewn on slightly crooked */
 .patch {
   position: relative;
@@ -174,8 +161,8 @@ h2 {
   width: 58px;
   height: 58px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--green-hi), var(--green) 70%);
-  box-shadow: 0 0 0 3px var(--cream), 0 0 0 5px var(--burgundy), var(--shadow-patch);
+  background: radial-gradient(circle at 35% 30%, var(--navy-hi), var(--navy) 70%);
+  box-shadow: 0 0 0 3px var(--cream), 0 0 0 5px var(--navy), var(--shadow-patch);
   transform: rotate(-6deg);
 }
 
@@ -237,7 +224,7 @@ h2 {
   top: 4px;
   width: 84px;
   height: 36px;
-  background: var(--burgundy);
+  background: var(--navy);
   clip-path: polygon(0 0, 100% 50%, 0 100%);
 }
 
@@ -284,7 +271,7 @@ h2 {
 
 /* The select is invisible, so show its keyboard focus ring on the pennant instead */
 .live-badge:has(select:focus-visible) {
-  outline: 3px solid var(--burgundy);
+  outline: 3px solid var(--navy);
   outline-offset: 2px;
 }
 
@@ -303,12 +290,12 @@ h2 {
 /* =========================================================
    5. The ticket: balance, this month, budget (class still "lightbox")
    ========================================================= */
-/* A cream ticket in a double green frame, with a cigar band across the top */
+/* A white ticket in a double navy frame, with a cigar band across the top */
 .lightbox {
   position: relative; /* the poker chip sits on it */
   background: var(--ticket);
   color: var(--ink);
-  border: 2px solid var(--green);
+  border: 2px solid var(--navy);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-ticket);
   padding: 0 22px 16px;
@@ -320,7 +307,7 @@ h2 {
   margin: 0;
 }
 
-/* The cigar band: burgundy between two gold trims, with a cream label in the middle */
+/* The cigar band: navy between two yellow trims, with a cream label in the middle */
 .cigar-band {
   display: flex;
   align-items: center;
@@ -328,7 +315,7 @@ h2 {
   height: 30px;
   margin: 0 -22px;
   border-radius: 4px 4px 0 0;
-  background: linear-gradient(var(--gold) 0 2px, var(--burgundy) 2px 28px, var(--gold) 28px);
+  background: linear-gradient(var(--yellow) 0 2px, var(--navy) 2px 28px, var(--yellow) 28px);
 }
 
 .cigar-band span {
@@ -337,10 +324,10 @@ h2 {
   font-size: 11px;
   line-height: 1.2;
   letter-spacing: .5px;
-  color: var(--burgundy);
+  color: var(--navy);
   white-space: nowrap;
   background: var(--ticket);
-  border: 1.5px solid var(--gold);
+  border: 1.5px solid var(--yellow);
   border-radius: 12px;
 }
 
@@ -371,7 +358,7 @@ h2 {
 .lightbox-total.is-medium #total { font-size: 50px; letter-spacing: -1.6px; }
 .lightbox-total.is-small #total  { font-size: 40px; letter-spacing: -1.2px; }
 
-/* The poker chip: burgundy and cream edge, a burgundy middle with a stitched ring and
+/* The poker chip: navy and cream edge, a navy middle with a stitched ring and
    "UNDER BUDGET". It sits on the ticket's right, tilted. */
 .poker-chip {
   position: absolute;
@@ -382,8 +369,8 @@ h2 {
   width: 66px;
   height: 66px;
   border-radius: 50%;
-  background: repeating-conic-gradient(var(--burgundy) 0 22.5deg, var(--cream) 22.5deg 45deg);
-  box-shadow: 0 6px 12px rgba(60, 20, 20, .3);
+  background: repeating-conic-gradient(var(--navy) 0 22.5deg, var(--cream) 22.5deg 45deg);
+  box-shadow: 0 6px 12px rgba(12, 31, 69, .3);
   transform: rotate(12deg);
 }
 
@@ -393,7 +380,7 @@ h2 {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: var(--burgundy);
+  background: var(--navy);
 }
 
 .poker-chip-inner span {
@@ -438,7 +425,7 @@ h2 {
 }
 
 #earned {
-  color: var(--green);
+  color: var(--ink);
 }
 
 /* With a budget: a thin bar of how much is spent, then "₱7,151 left of ₱10,000" beside it */
@@ -462,7 +449,7 @@ h2 {
   height: 100%;
   width: 0;
   border-radius: 3px;
-  background: var(--green);
+  background: var(--navy);
 }
 
 .budget-row {
@@ -536,37 +523,37 @@ input::placeholder {
 }
 
 /* The amount: a lit panel, like the total on the home screen */
-/* The amount: a small ticket in a double green frame, with a cigar band on top */
+/* The amount: a small ticket in a double navy frame, with a cigar band on top */
 .amount-field {
   background: var(--ticket);
   color: var(--ink);
-  border: 2px solid var(--green);
+  border: 2px solid var(--navy);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-ticket);
   padding: 0 18px 12px;
   margin: 6px 5px 0; /* room for the outer frame */
 }
 
-/* The band: 26px, burgundy for an expense, green for income (and on the opening sheet) */
+/* The band: 26px, navy with yellow trims (both types, and the opening sheet) */
 .amount-field .amount-band {
   height: 26px;
   margin: 0 -18px 6px;
-  background: linear-gradient(var(--gold) 0 2px, var(--burgundy) 2px 24px, var(--gold) 24px);
+  background: linear-gradient(var(--yellow) 0 2px, var(--navy) 2px 24px, var(--yellow) 24px);
 }
 
 #expense-form[data-type="income"] .amount-band,
 .amount-band.band-green {
-  background: linear-gradient(var(--gold) 0 2px, var(--green) 2px 24px, var(--gold) 24px);
+  background: linear-gradient(var(--yellow) 0 2px, var(--navy) 2px 24px, var(--yellow) 24px);
 }
 
 #expense-form[data-type="income"] .amount-band span,
 .amount-band.band-green span {
-  color: var(--green);
+  color: var(--navy);
 }
 
-/* Income amounts are green, like income everywhere else */
+/* Income amounts are navy ink, like every amount */
 #expense-form[data-type="income"] #amount {
-  color: var(--green);
+  color: var(--ink);
 }
 
 .amount-field label {
@@ -621,7 +608,7 @@ input::placeholder {
 
 /* Focus ring on the panel while you type the amount */
 .amount-field:focus-within {
-  outline: 3px solid var(--burgundy);
+  outline: 3px solid var(--navy);
   outline-offset: 8px; /* outside the double frame */
 }
 
@@ -680,19 +667,18 @@ input::placeholder {
   transform: scale(0.97);
 }
 
-/* The picked chip: gold with dark text. ":checked + .chip" = the label right after a ticked radio */
-/* The picked chip: green felt with a dashed cream stitch just inside its edge.
-   An expense category is burgundy felt instead. */
+/* The picked chip: navy felt with a dashed cream stitch just inside its edge.
+   Same for expense and income. */
 input:checked + .chip {
-  background: var(--green);
+  background: var(--navy);
   border: 1.5px dashed rgba(243, 233, 210, .7);
-  box-shadow: 0 0 0 2px var(--green);
+  box-shadow: 0 0 0 2px var(--navy);
   color: var(--cream);
 }
 
 #expense-form[data-type="expense"] #category-chips input:checked + .chip {
-  background: var(--burgundy);
-  box-shadow: 0 0 0 2px var(--burgundy);
+  background: var(--navy);
+  box-shadow: 0 0 0 2px var(--navy);
 }
 
 /* The note: no box, just a line to write on */
@@ -710,7 +696,7 @@ input:checked + .chip {
 
 /* The radio itself is invisible, so show its keyboard focus on the chip */
 input:focus-visible + .chip {
-  outline: 3px solid var(--burgundy);
+  outline: 3px solid var(--navy);
   outline-offset: 2px;
 }
 
@@ -754,10 +740,10 @@ input:focus-visible + .chip {
 /* Gold: the one positive choice in a group ("Add new expenses" after picking a CSV) */
 /* Green felt with a cream stitch ("Add new entries" after picking a CSV) */
 .btn-gold {
-  background: var(--green);
-  border-color: var(--green);
+  background: var(--navy);
+  border-color: var(--navy);
   color: var(--cream);
-  box-shadow: inset 0 0 0 3px var(--green), inset 0 0 0 4.5px rgba(243, 233, 210, .6);
+  box-shadow: inset 0 0 0 3px var(--navy), inset 0 0 0 4.5px rgba(243, 233, 210, .6);
 }
 
 .btn-danger {
@@ -793,16 +779,16 @@ input:focus-visible + .chip {
     filter: brightness(1.06);
   }
   .btn-gold:hover:not(:disabled) {
-    border-color: var(--green);
+    border-color: var(--navy);
   }
   .btn-danger-solid:hover:not(:disabled) {
     border-color: var(--danger);
   }
 }
 
-/* Keyboard users see a clear gold ring on whatever is focused */
+/* Keyboard users see a clear navy ring on whatever is focused */
 :focus-visible {
-  outline: 3px solid var(--burgundy);
+  outline: 3px solid var(--navy);
   outline-offset: 2px;
 }
 
@@ -832,7 +818,7 @@ select {
   border-radius: 50%;
   background:
     radial-gradient(circle, transparent 30%, rgba(255, 255, 255, .06) 31%, transparent 32%),
-    repeating-radial-gradient(circle, #121212 0 1.5px, var(--groove) 1.5px 3px);
+    repeating-radial-gradient(circle, var(--groove-a) 0 1.5px, var(--groove-b) 1.5px 3px);
   box-shadow: var(--shadow-record);
 }
 
@@ -851,7 +837,7 @@ select {
   width: 62px;
   height: 62px;
   border-radius: 50%;
-  background: var(--tan);
+  background: var(--paper);
   box-shadow: 0 0 0 2px var(--cream);
 }
 
@@ -914,7 +900,7 @@ button.spin-row {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgba(27, 34, 51, .4);
+  box-shadow: inset 0 0 0 1px rgba(12, 31, 69, .4);
 }
 
 .spin-name {
@@ -934,9 +920,9 @@ button.spin-row {
   font-variant-numeric: tabular-nums;
 }
 
-/* The picked category: burgundy name, underlined */
+/* The picked category: navy name, underlined */
 .spin-row[aria-pressed="true"] .spin-name {
-  color: var(--burgundy);
+  color: var(--ink);
   text-decoration: underline 2px;
   text-underline-offset: 3px;
 }
@@ -968,13 +954,13 @@ button.spin-row {
   margin-bottom: var(--space-2);
 }
 
-/* A button that looks like a link: gold, underlined, still finger-sized */
+/* A button that looks like a link: navy, underlined, still finger-sized */
 .link-button {
   min-height: var(--tap);
   padding: 0 4px;
   font: inherit;
   font-weight: 600;
-  color: var(--burgundy);
+  color: var(--navy);
   text-decoration: underline;
   text-underline-offset: 3px;
   background: none;
@@ -1050,7 +1036,7 @@ button.spin-row {
 }
 
 .day-in {
-  color: var(--green);
+  color: var(--ink);
 }
 
 .day-out {
@@ -1119,17 +1105,17 @@ button.spin-row {
   background: var(--ticket);
 }
 
-/* A 9px dot with a thin dark outline: the category's colour, gold for income,
+/* A 9px dot with a thin dark outline: the category's colour, yellow for income,
    tan for a balance adjustment */
 .expense-dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgba(27, 34, 51, .4);
+  box-shadow: inset 0 0 0 1px rgba(12, 31, 69, .4);
 }
 
 .expense-dot.is-income {
-  background: var(--gold);
+  background: var(--yellow);
 }
 
 .expense-dot.is-adjustment {
@@ -1167,7 +1153,7 @@ button.spin-row {
 }
 
 .expense-amount.is-income {
-  color: var(--green);
+  color: var(--ink);
 }
 
 .expense-amount.is-adjustment {
@@ -1221,16 +1207,16 @@ button.spin-row {
 
 /* The picked segment lights up like the lightbox */
 .segmented input:checked + label {
-  background: var(--green);
+  background: var(--navy);
   color: var(--cream);
 }
 
 .segmented input:focus-visible + label {
-  outline: 3px solid var(--burgundy);
+  outline: 3px solid var(--navy);
   outline-offset: 2px;
 }
 
-/* Above the list: plain text tabs on an ink rule; the picked one gets a burgundy underline */
+/* Above the list: plain text tabs on an ink rule; the picked one gets a navy underline */
 .segmented-list {
   display: flex;
   gap: 18px;
@@ -1257,11 +1243,11 @@ button.spin-row {
 .segmented-list input:checked + label {
   background: none;
   color: var(--ink);
-  border-bottom-color: var(--burgundy);
+  border-bottom-color: var(--navy);
 }
 
 /* In the sheet, under the title: two felt tabs in varsity lettering. The picked one is
-   burgundy (Expense) or green (Income) felt with a cream stitch. */
+   navy felt (both types) with a cream stitch. */
 .segmented-type {
   grid-auto-columns: minmax(0, 1fr);
   gap: var(--space-2);
@@ -1288,13 +1274,13 @@ button.spin-row {
 }
 
 #entry-expense:checked + label {
-  background: var(--burgundy);
-  box-shadow: inset 0 0 0 3px var(--burgundy), inset 0 0 0 4.5px rgba(243, 233, 210, .6), 0 6px 12px rgba(31, 59, 45, .2);
+  background: var(--navy);
+  box-shadow: inset 0 0 0 3px var(--navy), inset 0 0 0 4.5px rgba(243, 233, 210, .6), 0 6px 12px rgba(12, 31, 69, .2);
 }
 
 #entry-income:checked + label {
-  background: var(--green);
-  box-shadow: inset 0 0 0 3px var(--green), inset 0 0 0 4.5px rgba(243, 233, 210, .6), 0 6px 12px rgba(31, 59, 45, .2);
+  background: var(--navy);
+  box-shadow: inset 0 0 0 3px var(--navy), inset 0 0 0 4.5px rgba(243, 233, 210, .6), 0 6px 12px rgba(12, 31, 69, .2);
 }
 
 /* Actual balance: the field and its Update button side by side */
@@ -1385,7 +1371,7 @@ button.spin-row {
   border-color: var(--danger);
 }
 
-/* "Last backup: Nov 2 (20 days ago)" in the settings sheet; gold when a backup is overdue */
+/* "Last backup: Nov 2 (20 days ago)" in the settings sheet; danger red when a backup is overdue */
 .backup-last {
   margin: 0 0 var(--space-4);
   font-size: 0.875rem;
@@ -1468,7 +1454,7 @@ button.spin-row {
   font-size: 22px;
   line-height: 1.1;
   color: var(--ink);
-  background: var(--note);
+  background: var(--ticket);
   box-shadow: 0 4px 10px rgba(0, 0, 0, .12);
   transform: rotate(-2.5deg);
 }
@@ -1504,7 +1490,7 @@ button.motto {
   padding: var(--space-4) var(--space-5) calc(120px + env(safe-area-inset-bottom, 0px));
 }
 
-/* "Last backup 34 days ago · 12 new expenses": gold, so it's noticed, but small and calm */
+/* "Last backup 34 days ago · 12 new expenses": danger red, so it's noticed, but small and calm */
 .backup-reminder {
   margin: 0 0 2px;
   font-size: 0.875rem;
@@ -1541,7 +1527,7 @@ button.motto {
 }
 
 .offline-status.ready {
-  color: var(--green);
+  color: var(--ink);
   font-weight: 600;
 }
 
@@ -1562,7 +1548,7 @@ button.motto {
   font-size: 21px;
   font-weight: 600;
   color: var(--cream);
-  background: var(--green);
+  background: var(--navy);
   border: 0;
   border-radius: var(--radius-pill);
   box-shadow: var(--stitch), var(--shadow-button);
@@ -1577,14 +1563,14 @@ button.motto {
   transform: scale(0.97);
 }
 
-/* The gold star before the label: a star-shaped mask filled with gold (CSS, so app.js can
+/* The yellow star before the label: a star-shaped mask filled with yellow (CSS, so app.js can
    keep setting the button's text) */
 .glow-button::before {
   content: "";
   flex-shrink: 0;
   width: 18px;
   height: 18px;
-  background: var(--gold);
+  background: var(--yellow);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m12 2 2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m12 2 2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
@@ -1667,7 +1653,7 @@ button.motto {
   max-width: 480px;
   max-height: calc(100% - 110px);
   margin: 0 auto;
-  background: var(--sheet);
+  background: var(--paper);
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   box-shadow: 0 -10px 30px rgba(0, 0, 0, .25);
 }
@@ -1824,7 +1810,7 @@ html:has(.recap[open]) {
 }
 
 .text-button.gold {
-  color: var(--gold);
+  color: var(--yellow);
 }
 
 /* =========================================================
@@ -1883,16 +1869,16 @@ html:has(.recap[open]) {
   height: 30px;
   border-radius: 50%;
   background:
-    radial-gradient(circle, var(--cream) 0 1.5px, var(--burgundy) 1.5px 4.5px, var(--gold) 4.5px 5.5px, transparent 5.5px),
+    radial-gradient(circle, var(--paper) 0 1.5px, var(--rank-2) 1.5px 4.5px, var(--paper) 4.5px 6.5px, transparent 5.5px),
     conic-gradient(transparent 0 30deg, rgba(255, 228, 196, .22) 50deg, transparent 70deg 210deg,
       rgba(255, 228, 196, .14) 230deg, transparent 250deg),
-    repeating-radial-gradient(circle, #0e0e0e 0 1.5px, var(--groove) 1.5px 3px);
+    repeating-radial-gradient(circle, var(--groove-a) 0 1.5px, var(--groove-b) 1.5px 3px);
 }
 
 /* =========================================================
    14b. Monthly recap (with the disco ball when the month went well)
    ========================================================= */
-/* "The club after dark": full screen, green, with a soft spotlight from the top; everything centred */
+/* "The club after dark": full screen, navy, with a soft spotlight from the top; everything centred */
 .recap {
   position: fixed;
   inset: 0;
@@ -1910,8 +1896,8 @@ html:has(.recap[open]) {
   overflow-y: auto;
   color: var(--cream);
   background:
-    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(243, 233, 210, .14), transparent 70%),
-    var(--green);
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(250, 201, 47, .12), transparent 70%),
+    var(--navy);
   border: 0;
 }
 
@@ -1926,7 +1912,7 @@ html:has(.recap[open]) {
 }
 
 .recap::backdrop {
-  background: var(--green);
+  background: var(--navy);
 }
 
 /* With the ball hanging at the top, the content starts below it */
@@ -1955,7 +1941,7 @@ html:has(.recap[open]) {
 .recap-subtitle {
   margin: 6px 0 var(--space-6);
   font-size: 1rem;
-  color: rgba(243, 233, 210, .8); /* 7:1+ on the green */
+  color: rgba(243, 233, 210, .8); /* 7:1+ on the navy */
 }
 
 /* The month's ticket, like the one on the home screen (ink text on cream) */
@@ -1993,17 +1979,17 @@ html:has(.recap[open]) {
   min-height: 0;
 }
 
-/* A cream pill with green serif text and the gold star */
+/* A cream pill with navy serif text and the yellow star */
 .recap-start {
   width: 100%;
   margin-top: var(--space-6);
-  color: var(--green);
+  color: var(--navy);
   background: var(--cream);
-  box-shadow: inset 0 0 0 4px var(--cream), inset 0 0 0 5.5px rgba(31, 59, 45, .35), 0 10px 20px rgba(0, 0, 0, .25);
+  box-shadow: inset 0 0 0 4px var(--cream), inset 0 0 0 5.5px rgba(12, 31, 69, .35), 0 10px 20px rgba(0, 0, 0, .25);
 }
 
 .recap-start:focus-visible {
-  outline-color: var(--green);
+  outline-color: var(--navy);
 }
 
 /* --- The disco ball --- */
@@ -2031,7 +2017,7 @@ html:has(.recap[open]) {
   width: 8px;
   height: 6px;
   border-radius: 2px 2px 0 0;
-  background: var(--gold);
+  background: var(--yellow);
 }
 
 /* The ball: a warm highlight, darker towards the edges, with a grid of mirror tiles on top.
@@ -2044,8 +2030,8 @@ html:has(.recap[open]) {
   background:
     repeating-linear-gradient(90deg, rgba(10, 6, 5, .55) 0 1.5px, transparent 1.5px 9px),
     repeating-linear-gradient(0deg, rgba(10, 6, 5, .55) 0 1.5px, transparent 1.5px 9px),
-    radial-gradient(circle at 34% 30%, #fff6df 0 5%, #e2c98f 14%, #8a7550 38%, #2c2418 72%, #120e08 100%);
-  box-shadow: 0 0 40px rgba(217, 179, 94, .4);
+    radial-gradient(circle at 34% 30%, #ffffff 0 5%, #dfe6f5 14%, #8b9bc0 38%, #1a3566 72%, #050e22 100%);
+  box-shadow: 0 0 40px rgba(250, 201, 47, .35);
   animation: disco-turn 4s linear infinite;
 }
 
@@ -2063,8 +2049,8 @@ html:has(.recap[open]) {
   animation: twinkle 1.4s ease-in-out infinite;
 }
 
-.glint-1 { top: 22px; left: 28px; background: #fff6df; }
-.glint-2 { top: 46px; left: 62px; background: var(--gold); animation-delay: .45s; }
+.glint-1 { top: 22px; left: 28px; background: #ffffff; }
+.glint-2 { top: 46px; left: 62px; background: var(--yellow); animation-delay: .45s; }
 .glint-3 { top: 66px; left: 36px; background: var(--cream); animation-delay: .9s; }
 
 @keyframes twinkle {

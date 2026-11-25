@@ -14,7 +14,7 @@
   <!-- PWA: the manifest tells phones this page can be installed as an app (name, icon, colors) -->
   <link rel="manifest" href="manifest.webmanifest">
   <!-- Colors the phone's status bar / browser bar: the same as the page background (cream paper) -->
-  <meta name="theme-color" content="#f1ece1">
+  <meta name="theme-color" content="#f8f6f1">
 
   <!-- Fonts: Newsreader (money and headings), Hanken Grotesk (everything else), Graduate (varsity
        labels) and Caveat Brush (the motto). Offline, the fallbacks in style.css's font stacks are
@@ -27,11 +27,11 @@
   <!-- iPhones use these instead of the manifest's icons and name on the home screen -->
   <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Matt's Club">
-  <!-- "?v=18" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
+  <!-- "?v=19" is a version number. Browsers (and the service worker, sw.js) keep saved copies of
        style.css and app.js, so after changing either file, add 1 here, on the app.js link below,
        AND to VERSION in sw.js. The new number makes it a new address, so the new file is downloaded
        instead of mixing new HTML with old CSS/JS. -->
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
   <header class="app-header">
@@ -434,6 +434,6 @@
   </div>
 
   <!-- "defer" = run the script after the HTML above has loaded -->
-  <script src="app.js?v=18" defer></script>
+  <script src="app.js?v=19" defer></script>
 </body>
 </html>

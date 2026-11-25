@@ -94,7 +94,6 @@ const importReplaceBtn = document.getElementById('import-replace');
 const importCancelBtn = document.getElementById('import-cancel');
 
 // ===== 2. The categories: ONE list per type (the chips, the cones and CSV import all use them) =====
-// Expense categories each need a color in style.css: "--cat-" + the name in lowercase, spaces -> "-".
 const CATEGORIES = ['Food', 'Transport', 'Bills', 'Shopping', 'Health', 'Nights out', 'School', 'Other'];
 const INCOME_CATEGORIES = ['Allowance', 'Salary', 'Gift', 'Sold something', 'Other'];
 
@@ -749,12 +748,12 @@ function fitTotal() {
 
 // ===== 5b. The speaker panel: the month's biggest categories as "speaker cones" =====
 
-// Each category's color lives in style.css as a variable, e.g. --cat-food.
-// This turns "Food" into "var(--cat-food)" and "Nights out" into "var(--cat-nights-out)"
-// (spaces become dashes, because a CSS name can't contain a space).
-// Unknown categories fall back to the "Other" color.
+// A row's dot takes the colour of the record slot its category is in this month, so the
+// dots always match the record and its legend. renderSpeakerPanel() fills this map before the
+// rows are drawn. A category that isn't on the record (or sits in "Rest") gets the 4th colour.
+const slotColours = new Map();
 function categoryColor(category) {
-  return `var(--cat-${category.toLowerCase().replace(/\s+/g, '-')}, var(--cat-other))`;
+  return slotColours.get(category) ?? 'var(--rank-4)';
 }
 
 // The categories in their usual order (the order of the chips)
@@ -796,22 +795,22 @@ function percentsSummingTo100(amounts) {
 // "Now spinning" (expenses only): up to 4 slots. With 4 or fewer categories, one each; with more,
 // the top 3 + "Rest". The record's label is a pie of them, and the legend lists them; a legend row
 // is a button that shows only that category in the list ("Rest" isn't a button).
-// Slots are coloured by rank (1st green, 2nd burgundy, 3rd gold, 4th tan), not by category.
+// Slots are coloured by rank (1st brass, 2nd burgundy, 3rd teal, 4th slate), not by category.
 const RANK_COLOURS = ['var(--rank-1)', 'var(--rank-2)', 'var(--rank-3)', 'var(--rank-4)'];
 let recordSpun = false; // the record turns once, the first time it's drawn in a session
 
-// The label's pie: one slice per slot, with a thin cream gap after each. While a category is
-// picked, the other slices fade (mixed 35% with cream).
+// The label's pie: one slice per slot, with a thin paper gap after each. While a category is
+// picked, the other slices fade (mixed 35% with paper).
 function recordGradient(slots, percents) {
   const stops = [];
   let start = 0;
   slots.forEach((slot, i) => {
     const end = start + percents[i];
     const faded = filters.category !== 'all' && slot.category !== filters.category;
-    const colour = faded ? `color-mix(in srgb, ${RANK_COLOURS[i]} 35%, var(--cream))` : RANK_COLOURS[i];
+    const colour = faded ? `color-mix(in srgb, ${RANK_COLOURS[i]} 35%, var(--paper))` : RANK_COLOURS[i];
     // (one category = one whole slice: no gap, or it would look like a clock hand)
     const sliceEnd = slots.length === 1 ? end : Math.max(start, end - 0.6);
-    stops.push(`${colour} ${start}% ${sliceEnd}%`, `var(--cream) ${sliceEnd}% ${end}%`);
+    stops.push(`${colour} ${start}% ${sliceEnd}%`, `var(--paper) ${sliceEnd}% ${end}%`);
     start = end;
   });
   return `conic-gradient(${stops.join(', ')})`;
@@ -852,7 +851,9 @@ function renderSpeakerPanel(monthExpenses) {
       }
     }
   }
+  slotColours.clear();
   slots.forEach((slot, i) => {
+    if (slot.category) slotColours.set(slot.category, RANK_COLOURS[i]);
     const percent = percents[i];
     const name = slot.category ?? 'Rest';
     // A real but tiny share would round to "0%", which looks like nothing was spent
@@ -1525,7 +1526,7 @@ function sheetPanel(dialog) {
 
 // The darkness behind the sheet. amount: 1 = fully dimmed, 0 = not dimmed.
 function dimColor(amount) {
-  return `rgba(27, 34, 51, ${(SHEET_DIM * Math.min(Math.max(amount, 0), 1)).toFixed(3)})`; // --scrim
+  return `rgba(12, 31, 69, ${(SHEET_DIM * Math.min(Math.max(amount, 0), 1)).toFixed(3)})`; // --scrim
 }
 
 // Where the panel is right now, in px below its resting place (works mid-animation too)
@@ -1963,7 +1964,7 @@ function showRecap(month) {
 
 // 14 specks of light fly out from the ball once and fade: random sizes, colours and directions
 function throwFlecks() {
-  const colours = ['#d9b35e', '#f3e9d2', '#e8c676', '#ffffff'];
+  const colours = ['#fac92f', '#f3e9d2', '#ffffff', '#b8861b'];
   for (let i = 0; i < 14; i++) {
     const fleck = makeElement('span', 'fleck', '');
     const size = 4 + Math.round(Math.random() * 3); // 4–7px
